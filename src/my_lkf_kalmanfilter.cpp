@@ -11,10 +11,10 @@
 
 // -------------------------------------------------- //
 // YOU CAN USE AND MODIFY THESE CONSTANTS HERE
-constexpr bool INIT_ON_FIRST_PREDICTION = true;
-constexpr double INIT_POS_STD = 0;
-constexpr double INIT_VEL_STD = 15;
-constexpr double ACCEL_STD = 0.1;
+constexpr bool INIT_ON_FIRST_PREDICTION = false;
+constexpr double INIT_POS_STD = 1.0;
+constexpr double INIT_VEL_STD = 1.0;
+constexpr double ACCEL_STD = 0.0;
 constexpr double GPS_POS_STD = 3.0;
 // -------------------------------------------------- //
 
@@ -30,15 +30,30 @@ void KalmanFilter::predictionStep(double dt)
         // Hint: You can use the constants: INIT_POS_STD, INIT_VEL_STD
         // ----------------------------------------------------------------------- //
         // ENTER YOUR CODE HERE
-            VectorXd state = Vector4d::Zero();
-            MatrixXd cov = Matrix4d::Zero();
+        Vector4d state = Vector4d::Zero();
+        Matrix4d cov = Matrix4d::Zero();
 
-            // Assume the initial position is (X,Y) = (0,0) m
-            // Assume the initial velocity is 5 m/s at 45 degrees (VX,VY) = (5*cos(45deg),5*sin(45deg)) m/s
-            state << 0, 0, 5.0*cos(M_PI/4), 5.0*sin(M_PI/4);
+        // Assume the initial position is (X,Y) = (0,0) m
+        // Assume the initial velocity is 5 m/s at 45 degrees (VX,VY) = (5*cos(45deg),5*sin(45deg)) m/s
 
-            setState(state);
-            setCovariance(cov);
+        // Set the initial state
+        // double x = 0.0f;
+        // double y = 0.0f;
+        // double vx = 5 * cos(M_PI / 4);
+        // double vy = 5 * sin(M_PI / 4);
+        // state << x, y, vx, vy;
+        state << 0, 0, 0, 0;
+
+        // Set the initial covariance
+        double init_pos_var = INIT_POS_STD * INIT_POS_STD;
+        double init_vel_var = INIT_VEL_STD * INIT_VEL_STD;
+        cov <<  init_pos_var, 0, 0, 0,
+                0, init_pos_var, 0, 0,
+                0, 0, init_vel_var, 0,
+                0, 0, 0, init_vel_var;
+
+        setState(state);
+        setCovariance(cov);
         // ----------------------------------------------------------------------- //
     }
 
@@ -52,6 +67,22 @@ void KalmanFilter::predictionStep(double dt)
         // Hint: You can use the constants: ACCEL_STD
         // ----------------------------------------------------------------------- //
         // ENTER YOUR CODE HERE
+        MatrixXd F = Matrix4d::Identity(4,4);
+        F(0,2) = dt;
+        F(1,3) = dt;
+
+        // Predict the state
+        state = F * state;
+
+        // Predict the covariance
+        Matrix2d Q = Matrix2d::Identity(2,2) * ACCEL_STD * ACCEL_STD;
+        MatrixXd L =  MatrixXd::Zero(4,2);
+        L << 0.5*dt*dt , 0,
+                0, 0.5*dt*dt,
+                dt, 0,
+                0, dt;
+
+        cov = F * cov * F.transpose() + L * Q * L.transpose();
 
 
         // ----------------------------------------------------------------------- //
@@ -74,7 +105,18 @@ void KalmanFilter::handleGPSMeasurement(GPSMeasurement meas)
         // Hint: You can use the constants: GPS_POS_STD
         // ----------------------------------------------------------------------- //
         // ENTER YOUR CODE HERE 
+        Matrix2d R = Matrix2d::Identity() * GPS_POS_STD * GPS_POS_STD;
+        MatrixXd H(2,4);
 
+        H <<    1,0,0,0,
+                0,1,0,0;
+
+        VectorXd y_tile = Vector2d(meas.x, meas.y) - H * state;
+        MatrixXd S = H*cov*H.transpose() + R;
+        MatrixXd K = cov*H.transpose()*S.inverse();
+
+        state = state + K*y_tile;
+        cov = (Matrix4d::Identity() - K*H) * cov;
 
         // ----------------------------------------------------------------------- //
 
@@ -90,12 +132,21 @@ void KalmanFilter::handleGPSMeasurement(GPSMeasurement meas)
         // Hint: You can use the constants: GPS_POS_STD, INIT_VEL_STD
         // ----------------------------------------------------------------------- //
         // ENTER YOUR CODE HERE
-            VectorXd state = Vector4d::Zero();
-            MatrixXd cov = Matrix4d::Zero();
+        VectorXd state = Vector4d::Zero();
+        MatrixXd cov = Matrix4d::Zero();
 
+        state << meas.x, meas.y, 0, 0;
 
-            setState(state);
-            setCovariance(cov);
+        // Set the initial covariance
+        double init_pos_var = GPS_POS_STD * GPS_POS_STD;
+        double init_vel_var = INIT_VEL_STD * INIT_VEL_STD;
+        cov <<  init_pos_var, 0, 0, 0,
+                0, init_pos_var, 0, 0,
+                0, 0, init_vel_var, 0,
+                0, 0, 0, init_vel_var;
+
+        setState(state);
+        setCovariance(cov);
         // ----------------------------------------------------------------------- //
     }        
 }
