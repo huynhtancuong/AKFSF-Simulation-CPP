@@ -12,7 +12,7 @@ set(SRC_CPP
     src/sensors.cpp
     src/simulation.cpp
     src/utils.cpp
-    src/kalmanfilter.cpp
+    src/capstone_ekf.cpp
 )
 
 add_executable(${PROJECT_NAME}
