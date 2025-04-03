@@ -27,6 +27,8 @@ struct Vector2
 
 std::vector<Vector2> transformPoints(const std::vector<Vector2>& points, const Vector2& position, const double rotation);
 std::vector<std::vector<Vector2>> transformPoints(const std::vector<std::vector<Vector2>>& dataset, const Vector2& position, const double rotation);
+std::vector<Vector2> scalePoints(const std::vector<Vector2>& points, const double scale);
+std::vector<std::vector<Vector2>> scalePoints(const std::vector<std::vector<Vector2>>& dataset, const double scale);
 std::vector<Vector2> offsetPoints(const std::vector<Vector2>& points, const Vector2& offset);
 std::vector<std::vector<Vector2>> offsetPoints(const std::vector<std::vector<Vector2>>& dataset, const Vector2& offset);
 
