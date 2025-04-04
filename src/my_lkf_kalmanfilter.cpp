@@ -4,7 +4,7 @@
 // ####### STUDENT FILE #######
 //
 // Usage:
-// -Rename this file to "kalmanfilter.cpp" if you want to use this code.
+// -Rename this file to "KalmanFilterLKF.cpp" if you want to use this code.
 
 #include "kalmanfilter.h"
 #include "utils.h"
@@ -14,11 +14,11 @@
 constexpr bool INIT_ON_FIRST_PREDICTION = false;
 constexpr double INIT_POS_STD = 1.0;
 constexpr double INIT_VEL_STD = 1.0;
-constexpr double ACCEL_STD = 0.0;
+constexpr double ACCEL_STD = 0.5;
 constexpr double GPS_POS_STD = 3.0;
 // -------------------------------------------------- //
 
-void KalmanFilter::predictionStep(double dt)
+void KalmanFilterLKF::predictionStep(double dt)
 {
     if (!isInitialised() && INIT_ON_FIRST_PREDICTION)
     {
@@ -92,7 +92,7 @@ void KalmanFilter::predictionStep(double dt)
     }
 }
 
-void KalmanFilter::handleGPSMeasurement(GPSMeasurement meas)
+void KalmanFilterLKF::handleGPSMeasurement(GPSMeasurement meas)
 {
     if(isInitialised())
     {
@@ -151,7 +151,7 @@ void KalmanFilter::handleGPSMeasurement(GPSMeasurement meas)
     }        
 }
 
-Matrix2d KalmanFilter::getVehicleStatePositionCovariance()
+Matrix2d KalmanFilterLKF::getVehicleStatePositionCovariance()
 {
     Matrix2d pos_cov = Matrix2d::Zero();
     MatrixXd cov = getCovariance();
@@ -159,7 +159,8 @@ Matrix2d KalmanFilter::getVehicleStatePositionCovariance()
     return pos_cov;
 }
 
-VehicleState KalmanFilter::getVehicleState()
+
+VehicleState KalmanFilterLKF::getVehicleState()
 {
     if (isInitialised())
     {
@@ -171,7 +172,12 @@ VehicleState KalmanFilter::getVehicleState()
     return VehicleState();
 }
 
-void KalmanFilter::predictionStep(GyroMeasurement gyro, double dt){predictionStep(dt);}
-void KalmanFilter::handleLidarMeasurements(const std::vector<LidarMeasurement>& dataset, const BeaconMap& map){}
-void KalmanFilter::handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map){}
+void KalmanFilterLKF::predictionStep(IMUMeasurement accel, double dt){predictionStep(dt);}
+
+
+void KalmanFilterLKF::handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) {
+}
+void KalmanFilterLKF::handleCompassMeasurement(CompassMeasurement meas){}
+void KalmanFilterLKF::handleLidarMeasurements(const std::vector<LidarMeasurement>& dataset, const BeaconMap& map){}
+void KalmanFilterLKF::handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map){}
 

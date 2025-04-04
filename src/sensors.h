@@ -4,9 +4,13 @@
 #include <random>
 #include <vector>
 
+
 struct GPSMeasurement{double x,y;};
-struct GyroMeasurement{double psi_dot;};
-struct LidarMeasurement{double range, theta;int id;};
+
+struct LidarMeasurement{double range, psi;int id;};
+struct IMUMeasurement{double accel, yaw_rate;};
+struct WheelsSpeedMeasurement{double right_wheel_vel, left_wheel_vel, base_wheel_distance;};
+struct CompassMeasurement{double theta;};
 
 class BeaconMap;
 
@@ -30,22 +34,6 @@ class GPSSensor
 
 };
 
-class GyroSensor
-{
-    public:
-
-        GyroSensor();
-        void reset();
-        void setGyroNoiseStd(double std);
-        void setGyroBias(double bias);
-        GyroMeasurement generateGyroMeasurement(double sensor_yaw_rate);
-
-    private:
-
-        std::mt19937 m_rand_gen;
-        double m_noise_std;
-        double m_bias;
-};
 
 class LidarSensor
 {
@@ -65,6 +53,54 @@ class LidarSensor
         double m_theta_noise_std;
         double m_max_range;
         bool m_id_enabled;
+};
+
+class IMUSensor
+{
+    public:
+
+        IMUSensor();
+        void reset();
+        void setAccelNoiseStd(double std);
+        void setGyroNoiseStd(double std);
+        IMUMeasurement generateIMUMeasurement(double sensor_accel, double sensor_yaw_rate);
+
+        void setGyroBias(double gyro_bias);
+
+    private:
+
+        std::mt19937 m_rand_gen;
+        double m_accel_noise_std, m_gyro_noise_std, m_gyro_bias;
+};
+
+class WheelsSpeedSensor
+{
+    public:
+
+        WheelsSpeedSensor();
+        void reset();
+        void setOdometerNoiseStd(double std);
+        WheelsSpeedMeasurement generateWheelsSpeedMeasurement(double sensor_left_wheel_vel, double sensor_right_wheel_vel, double base_wheel_distance);
+
+    private:
+
+        std::mt19937 m_rand_gen;
+        double m_noise_std;
+};
+
+class CompassSensor
+{
+    public:
+
+        CompassSensor();
+        void reset();
+        void setCompassNoiseStd(double std);
+        CompassMeasurement generateCompassMeasurement(double sensor_heading);
+
+    private:
+
+        std::mt19937 m_rand_gen;
+        double m_noise_std;
 };
 
 #endif  // INCLUDE_AKFSFSIM_SENSORS_H

@@ -4,7 +4,7 @@
 // ####### STUDENT FILE #######
 //
 // Usage:
-// -Rename this file to "kalmanfilter.cpp" if you want to use this code.
+// -Rename this file to "KalmanFilterUKF.cpp" if you want to use this code.
 
 #include "kalmanfilter.h"
 #include "utils.h"
@@ -14,7 +14,7 @@
 constexpr double ACCEL_STD = 0.5;
 constexpr double GYRO_STD = 0.01/180.0 * M_PI;
 constexpr double INIT_VEL_STD = 2;
-constexpr double INIT_PSI_STD = 5.0/180.0 * M_PI;
+constexpr double INIT_THETA_STD = 5.0/180.0 * M_PI;
 constexpr double GPS_POS_STD = 3.0;
 constexpr double LIDAR_RANGE_STD = 3.0;
 constexpr double LIDAR_THETA_STD = 0.02;
@@ -123,7 +123,7 @@ VectorXd vehicleProcessModel(VectorXd aug_state, double psi_dot, double dt)
 }
 // ----------------------------------------------------------------------- //
 
-void KalmanFilter::handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map)
+void KalmanFilterUKF::handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map)
 {
     if (isInitialised())
     {
@@ -152,7 +152,7 @@ void KalmanFilter::handleLidarMeasurement(LidarMeasurement meas, const BeaconMap
 
             // Create measurement vector and measurement noise cov
             VectorXd z = VectorXd::Zero(n_z);
-            z << meas.range, meas.theta;
+            z << meas.range, meas.psi;
 
             Matrix2d R;
             R <<    LIDAR_RANGE_STD * LIDAR_RANGE_STD, 0,
@@ -219,71 +219,71 @@ void KalmanFilter::handleLidarMeasurement(LidarMeasurement meas, const BeaconMap
     }
 }
 
-void KalmanFilter::predictionStep(GyroMeasurement gyro, double dt)
-{
-    if (isInitialised())
-    {
-        VectorXd state = getState();
-        MatrixXd cov = getCovariance();
+// void KalmanFilterUKF::predictionStep(GyroMeasurement gyro, double dt)
+// {
+//     if (isInitialised())
+//     {
+//         VectorXd state = getState();
+//         MatrixXd cov = getCovariance();
+//
+//         // Implement The Kalman Filter Prediction Step for the system in the
+//         // section below.
+//         // HINT: Assume the state vector has the form [PX, PY, PSI, V].
+//         // HINT: Use the Gyroscope measurement as an input into the prediction step.
+//         // HINT: You can use the constants: ACCEL_STD, GYRO_STD
+//         // HINT: Use the normaliseState() function to always keep angle values within correct range.
+//         // HINT: Do NOT normalise during sigma point calculation!
+//         // ----------------------------------------------------------------------- //
+//         // ENTER YOUR CODE HERE
+//
+//         Matrix2d Q;
+//         Q <<    GYRO_STD * GYRO_STD, 0,
+//                 0, ACCEL_STD * ACCEL_STD;
+//
+//         const unsigned int n_x = state.size();
+//         const unsigned int n_w = 2;
+//         const unsigned int n_aug = n_x + n_w;
+//
+//         VectorXd x_aug = VectorXd::Zero(n_aug);
+//         x_aug.head(n_x) = state;
+//
+//         MatrixXd P_aug = MatrixXd::Zero(n_aug, n_aug);
+//         P_aug.topLeftCorner(n_x,n_x) = cov;
+//         P_aug.bottomRightCorner(n_w, n_w) = Q;
+//
+//         // Generate sigma points and their weights
+//         auto sigmaPoints = generateSigmaPoints(x_aug, P_aug);
+//         auto weights = generateSigmaWeights(n_aug);
+//
+//         // Transform sigma points with vehicle process model
+//         std::vector<VectorXd> sigma_points_predict;
+//         for (const auto& sigmaPoint: sigmaPoints) {
+//             auto new_state = vehicleProcessModel(sigmaPoint, gyro.omega, dt);
+//             sigma_points_predict.push_back(new_state);
+//         }
+//
+//         // Calculate the mean
+//         state.setZero();
+//         for (size_t i = 0; i < sigmaPoints.size(); i++) {
+//             state += weights.at(i) * sigma_points_predict.at(i);
+//         }
+//         state = normaliseState(std::move(state));
+//
+//         // Calculate the covariance matrix
+//         cov.setZero();
+//         for (size_t i = 0; i < sigmaPoints.size(); i++) {
+//             VectorXd diff = normaliseState(sigma_points_predict.at(i) - state);
+//             cov += weights.at(i) * diff * diff.transpose();
+//         }
+//
+//         // ----------------------------------------------------------------------- //
+//
+//         setState(state);
+//         setCovariance(cov);
+//     }
+// }
 
-        // Implement The Kalman Filter Prediction Step for the system in the  
-        // section below.
-        // HINT: Assume the state vector has the form [PX, PY, PSI, V].
-        // HINT: Use the Gyroscope measurement as an input into the prediction step.
-        // HINT: You can use the constants: ACCEL_STD, GYRO_STD
-        // HINT: Use the normaliseState() function to always keep angle values within correct range.
-        // HINT: Do NOT normalise during sigma point calculation!
-        // ----------------------------------------------------------------------- //
-        // ENTER YOUR CODE HERE
-
-        Matrix2d Q;
-        Q <<    GYRO_STD * GYRO_STD, 0,
-                0, ACCEL_STD * ACCEL_STD;
-
-        const unsigned int n_x = state.size();
-        const unsigned int n_w = 2;
-        const unsigned int n_aug = n_x + n_w;
-
-        VectorXd x_aug = VectorXd::Zero(n_aug);
-        x_aug.head(n_x) = state;
-
-        MatrixXd P_aug = MatrixXd::Zero(n_aug, n_aug);
-        P_aug.topLeftCorner(n_x,n_x) = cov;
-        P_aug.bottomRightCorner(n_w, n_w) = Q;
-
-        // Generate sigma points and their weights
-        auto sigmaPoints = generateSigmaPoints(x_aug, P_aug);
-        auto weights = generateSigmaWeights(n_aug);
-
-        // Transform sigma points with vehicle process model
-        std::vector<VectorXd> sigma_points_predict;
-        for (const auto& sigmaPoint: sigmaPoints) {
-            auto new_state = vehicleProcessModel(sigmaPoint, gyro.psi_dot, dt);
-            sigma_points_predict.push_back(new_state);
-        }
-
-        // Calculate the mean
-        state.setZero();
-        for (size_t i = 0; i < sigmaPoints.size(); i++) {
-            state += weights.at(i) * sigma_points_predict.at(i);
-        }
-        state = normaliseState(std::move(state));
-
-        // Calculate the covariance matrix
-        cov.setZero();
-        for (size_t i = 0; i < sigmaPoints.size(); i++) {
-            VectorXd diff = normaliseState(sigma_points_predict.at(i) - state);
-            cov += weights.at(i) * diff * diff.transpose();
-        }
-
-        // ----------------------------------------------------------------------- //
-
-        setState(state);
-        setCovariance(cov);
-    } 
-}
-
-void KalmanFilter::handleGPSMeasurement(GPSMeasurement meas)
+void KalmanFilterUKF::handleGPSMeasurement(GPSMeasurement meas)
 {
     // All this code is the same as the LKF as the measurement model is linear
     // so the UKF update state would just produce the same result.
@@ -326,7 +326,7 @@ void KalmanFilter::handleGPSMeasurement(GPSMeasurement meas)
         state(1) = meas.y;
         cov(0,0) = GPS_POS_STD*GPS_POS_STD;
         cov(1,1) = GPS_POS_STD*GPS_POS_STD;
-        cov(2,2) = INIT_PSI_STD*INIT_PSI_STD;
+        cov(2,2) = INIT_THETA_STD*INIT_THETA_STD;
         cov(3,3) = INIT_VEL_STD*INIT_VEL_STD;
 
         setState(state);
@@ -336,13 +336,13 @@ void KalmanFilter::handleGPSMeasurement(GPSMeasurement meas)
     }             
 }
 
-void KalmanFilter::handleLidarMeasurements(const std::vector<LidarMeasurement>& dataset, const BeaconMap& map)
+void KalmanFilterUKF::handleLidarMeasurements(const std::vector<LidarMeasurement>& dataset, const BeaconMap& map)
 {
     // Assume No Correlation between the Measurements and Update Sequentially
     for(const auto& meas : dataset) {handleLidarMeasurement(meas, map);}
 }
 
-Matrix2d KalmanFilter::getVehicleStatePositionCovariance()
+Matrix2d KalmanFilterUKF::getVehicleStatePositionCovariance()
 {
     Matrix2d pos_cov = Matrix2d::Zero();
     MatrixXd cov = getCovariance();
@@ -350,7 +350,7 @@ Matrix2d KalmanFilter::getVehicleStatePositionCovariance()
     return pos_cov;
 }
 
-VehicleState KalmanFilter::getVehicleState()
+VehicleState KalmanFilterUKF::getVehicleState()
 {
     if (isInitialised())
     {
@@ -360,4 +360,12 @@ VehicleState KalmanFilter::getVehicleState()
     return VehicleState();
 }
 
-void KalmanFilter::predictionStep(double dt){}
+void KalmanFilterUKF::predictionStep(double dt){}
+
+void KalmanFilterUKF::predictionStep(IMUMeasurement accel, double dt){}
+
+
+void KalmanFilterUKF::handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) {
+}
+
+void KalmanFilterUKF::handleCompassMeasurement(CompassMeasurement meas){}

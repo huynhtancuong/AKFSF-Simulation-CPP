@@ -18,38 +18,108 @@ using Eigen::Matrix4d;
 
 class KalmanFilterBase
 {
-    public:
+public:
+    KalmanFilterBase():m_initialised(false){}
+    virtual ~KalmanFilterBase(){}
+    void reset(){m_initialised = false;}
+    bool isInitialised() const {return m_initialised;}
 
-        KalmanFilterBase():m_initialised(false){}
-        virtual ~KalmanFilterBase(){}
-        void reset(){m_initialised = false;}
-        bool isInitialised() const {return m_initialised;}
+    virtual VehicleState getVehicleState() = 0;
+    virtual Matrix2d getVehicleStatePositionCovariance() = 0;
 
-    protected:
-    
-        VectorXd getState() const {return m_state;}
-        MatrixXd getCovariance()const {return m_covariance;}
-        void setState(const VectorXd& state ) {m_state = state; m_initialised = true;}
-        void setCovariance(const MatrixXd& cov ){m_covariance = cov;}
+    virtual void predictionStep(double dt) = 0;
 
-    private:
-        bool m_initialised;
-        VectorXd m_state;
-        MatrixXd m_covariance;
+    virtual void predictionStep(IMUMeasurement imu_meas, double dt) = 0;
+
+    virtual void handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) = 0;
+    virtual void handleLidarMeasurements(const std::vector<LidarMeasurement>& meas, const BeaconMap& map) = 0;
+    virtual void handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map) = 0;
+    virtual void handleGPSMeasurement(GPSMeasurement meas) = 0;
+    virtual void handleCompassMeasurement(CompassMeasurement meas) = 0;
+
+
+protected:
+    VectorXd getState() const {return m_state;}
+    MatrixXd getCovariance()const {return m_covariance;}
+    void setState(const VectorXd& state ) {m_state = state; m_initialised = true;}
+    void setCovariance(const MatrixXd& cov ){m_covariance = cov;}
+
+private:
+    bool m_initialised;
+    VectorXd m_state;
+    MatrixXd m_covariance;
 };
 
-class KalmanFilter : public KalmanFilterBase
+class KalmanFilterLKF : public KalmanFilterBase
 {
-    public:
+public:
 
-        VehicleState getVehicleState();
-        Matrix2d getVehicleStatePositionCovariance();
+    VehicleState getVehicleState() override;
+    Matrix2d getVehicleStatePositionCovariance() override;
 
-        void predictionStep(double dt);
-        void predictionStep(GyroMeasurement gyro, double dt);
-        void handleLidarMeasurements(const std::vector<LidarMeasurement>& meas, const BeaconMap& map);
-        void handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map);
-        void handleGPSMeasurement(GPSMeasurement meas);
+    void predictionStep(double dt) override;
+    void predictionStep(IMUMeasurement imu_meas, double dt) override;
+
+    void handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) override;
+    void handleLidarMeasurements(const std::vector<LidarMeasurement>& meas, const BeaconMap& map) override;
+    void handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map) override;
+    void handleGPSMeasurement(GPSMeasurement meas) override;
+    void handleCompassMeasurement(CompassMeasurement meas) override;
+
+};
+
+class KalmanFilterEKF : public KalmanFilterBase
+{
+public:
+
+    VehicleState getVehicleState() override;
+    Matrix2d getVehicleStatePositionCovariance() override;
+
+
+    void predictionStep(double dt) override;
+    void predictionStep(IMUMeasurement imu_meas, double dt) override;
+
+    void handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) override;
+    void handleLidarMeasurements(const std::vector<LidarMeasurement>& meas, const BeaconMap& map) override;
+    void handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map) override;
+    void handleGPSMeasurement(GPSMeasurement meas) override;
+    void handleCompassMeasurement(CompassMeasurement meas) override;
+
+};
+
+class KalmanFilterUKF : public KalmanFilterBase
+{
+public:
+
+    VehicleState getVehicleState() override;
+    Matrix2d getVehicleStatePositionCovariance() override;
+
+    void predictionStep(double dt) override;
+    void predictionStep(IMUMeasurement imu_meas, double dt) override;
+
+    void handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) override;
+    void handleLidarMeasurements(const std::vector<LidarMeasurement>& meas, const BeaconMap& map) override;
+    void handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map) override;
+    void handleGPSMeasurement(GPSMeasurement meas) override;
+    void handleCompassMeasurement(CompassMeasurement meas) override;
+
+};
+
+class OdometryFilter : public KalmanFilterBase
+{
+public:
+
+    VehicleState getVehicleState() override;
+    Matrix2d getVehicleStatePositionCovariance() override;
+
+    void predictionStep(double dt) override;
+    void predictionStep(IMUMeasurement imu_meas, double dt) override;
+
+    void handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) override;
+    void handleLidarMeasurements(const std::vector<LidarMeasurement>& meas, const BeaconMap& map) override;
+    void handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map) override;
+    void handleGPSMeasurement(GPSMeasurement meas) override;
+    void handleCompassMeasurement(CompassMeasurement meas) override;
 
 };
 

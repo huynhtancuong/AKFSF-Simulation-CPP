@@ -80,8 +80,8 @@ int main( int argc, char* args[] )
                 {               
                     case SDLK_SPACE: mSimulation.togglePauseSimulation(); break;
                     case SDLK_ESCAPE:mRunning = false; break;
-                    case SDLK_KP_PLUS: mSimulation.increaseZoom(); break;
-                    case SDLK_KP_MINUS: mSimulation.decreaseZoom(); break;
+                    case SDLK_PAGEUP: mSimulation.increaseZoom(); break;
+                    case SDLK_PAGEDOWN: mSimulation.decreaseZoom(); break;
                     case SDLK_RIGHTBRACKET: mSimulation.increaseTimeMultiplier(); break;
                     case SDLK_LEFTBRACKET: mSimulation.decreaseTimeMultiplier(); break;
                     case SDLK_r: mSimulation.reset(); break;
@@ -95,6 +95,15 @@ int main( int argc, char* args[] )
                     case SDLK_8: mSimulation.reset(loadSimulation8Parameters()); break;
                     case SDLK_9: mSimulation.reset(loadSimulation9Parameters()); break;
                     case SDLK_0: mSimulation.reset(loadSimulation0Parameters()); break;
+                    case SDLK_l: mSimulation.selectFilter(0); break;
+                    case SDLK_e: mSimulation.selectFilter(1); break;
+                    case SDLK_u: mSimulation.selectFilter(2); break;
+                    case SDLK_o: mSimulation.selectFilter(3); break;
+                    case SDLK_c: mSimulation.toggleSensorCompass(); break;
+                    case SDLK_i: mSimulation.toggleSensorIMU(); break;
+                    case SDLK_g: mSimulation.toggleSensorGPS(); break;
+                    case SDLK_d: mSimulation.toggleSensorLidar(); break;
+                    case SDLK_w: mSimulation.toggleSensorWheelEncoder(); break;
                 }
             }
         }
@@ -137,7 +146,7 @@ SimulationParams loadSimulation3Parameters()
     SimulationParams sim_params;
     sim_params.profile_name = "3 - Constant Speed Profile + GPS + GYRO";
     sim_params.car_initial_velocity = 5;
-    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
+    sim_params.car_initial_psi = M_PI/180.0 * 0.0;
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,5));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,-100,5));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,5));
@@ -151,7 +160,7 @@ SimulationParams loadSimulation4Parameters()
     sim_params.profile_name = "4 - Variable Speed Profile + GPS + GYRO";
     sim_params.end_time = 200;
     sim_params.car_initial_velocity = 0;
-    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
+    sim_params.car_initial_psi = M_PI/180.0 * 0.0;
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,2));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,-100,5));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,7));
@@ -196,7 +205,6 @@ SimulationParams loadSimulation9Parameters()
 {    
     SimulationParams sim_params;
     sim_params.profile_name = "9 - CAPSTONE";
-    sim_params.gyro_enabled = true;
     sim_params.lidar_enabled = true;
     sim_params.end_time = 500;
     sim_params.car_initial_x = 400;

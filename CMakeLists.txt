@@ -6,13 +6,16 @@ set(CMAKE_CXX_STANDARD 11)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 set(SRC_CPP
-    src/main.cpp
-    src/display.cpp
-    src/beacons.cpp
-    src/sensors.cpp
-    src/simulation.cpp
-    src/utils.cpp
-    src/capstone_ekf.cpp
+        src/main.cpp
+        src/display.cpp
+        src/beacons.cpp
+        src/sensors.cpp
+        src/simulation.cpp
+        src/utils.cpp
+        src/my_lkf_kalmanfilter.cpp
+        src/my_ekf_kalmanfilter.cpp
+        src/my_ukf_kalmanfilter.cpp
+        src/my_odometry_filter.cpp
 )
 
 add_executable(${PROJECT_NAME}

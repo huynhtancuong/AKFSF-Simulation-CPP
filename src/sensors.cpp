@@ -23,18 +23,6 @@ GPSMeasurement GPSSensor::generateGPSMeasurement(double sensor_x, double sensor_
     return meas;
 }
 
-// Gyro Sensor
-GyroSensor::GyroSensor():m_rand_gen(std::mt19937()),m_noise_std(0.0),m_bias(0.0){}
-void GyroSensor::reset(){m_rand_gen = std::mt19937();}
-void GyroSensor::setGyroNoiseStd(double std){m_noise_std = std;}
-void GyroSensor::setGyroBias(double bias){m_bias = bias;}
-GyroMeasurement GyroSensor::generateGyroMeasurement(double sensor_yaw_rate)
-{
-    GyroMeasurement meas;
-    std::normal_distribution<double> gyro_dis(0.0,m_noise_std);
-    meas.psi_dot = sensor_yaw_rate + m_bias + gyro_dis(m_rand_gen);
-    return meas;
-}
 
 // Lidar Sensor
 LidarSensor::LidarSensor():m_rand_gen(std::mt19937()),m_range_noise_std(0.0),m_theta_noise_std(0.0),m_max_range(90.0),m_id_enabled(true){}
@@ -57,11 +45,72 @@ std::vector<LidarMeasurement> LidarSensor::generateLidarMeasurements(double sens
         {
             LidarMeasurement beacon_meas;
             beacon_meas.range = std::abs(beacon_range + lidar_range_dis(m_rand_gen));
-            beacon_meas.theta = wrapAngle(theta + lidar_theta_dis(m_rand_gen));
+            beacon_meas.psi = wrapAngle(theta + lidar_theta_dis(m_rand_gen));
             beacon_meas.id = (m_id_enabled ? beacon.id : -1);
             meas.push_back(beacon_meas);
         }
     }
+    return meas;
+}
+
+// IMU Sensor
+IMUSensor::IMUSensor():
+    m_rand_gen(std::mt19937()),m_accel_noise_std(0.0), m_gyro_noise_std(0.0) {}
+void IMUSensor::reset() {
+    m_rand_gen = std::mt19937();
+}
+void IMUSensor::setAccelNoiseStd(double std) {
+    m_accel_noise_std = std;
+}
+void IMUSensor::setGyroNoiseStd(double std) {
+    m_gyro_noise_std = std;
+}
+
+void IMUSensor::setGyroBias(double gyro_bias)
+{
+    m_gyro_bias = gyro_bias;
+}
+
+IMUMeasurement IMUSensor::generateIMUMeasurement(double sensor_accel, double sensor_yaw_rate) {
+    IMUMeasurement meas{};
+    std::normal_distribution<double> accel_dis(0.0, m_accel_noise_std);
+    std::normal_distribution<double> gyro_dis(0.0, m_gyro_noise_std);
+    meas.accel = sensor_accel + accel_dis(m_rand_gen);
+    meas.yaw_rate = sensor_yaw_rate + gyro_dis(m_rand_gen);
+    return meas;
+}
+
+// Wheels Speed Sensor
+WheelsSpeedSensor::WheelsSpeedSensor():
+    m_rand_gen(std::mt19937()),m_noise_std(0.0) {}
+void WheelsSpeedSensor::reset() {
+    m_rand_gen = std::mt19937();
+}
+void WheelsSpeedSensor::setOdometerNoiseStd(double std) {
+    m_noise_std = std;
+}
+WheelsSpeedMeasurement WheelsSpeedSensor::generateWheelsSpeedMeasurement(double right_wheel_vel, double left_wheel_vel, double base_wheel_distance) {
+    WheelsSpeedMeasurement meas{};
+    std::normal_distribution<double> odometer_dis(0.0, m_noise_std);
+    meas.right_wheel_vel = right_wheel_vel + odometer_dis(m_rand_gen);
+    meas.left_wheel_vel = left_wheel_vel - odometer_dis(m_rand_gen);
+    meas.base_wheel_distance = base_wheel_distance;
+    return meas;
+}
+
+// Compass Sensor
+CompassSensor::CompassSensor():
+    m_rand_gen(std::mt19937()),m_noise_std(0.0) {}
+void CompassSensor::reset() {
+    m_rand_gen = std::mt19937();
+}
+void CompassSensor::setCompassNoiseStd(double std) {
+    m_noise_std = std;
+}
+CompassMeasurement CompassSensor::generateCompassMeasurement(double psi) {
+    CompassMeasurement meas;
+    std::normal_distribution<double> compass_dis(0.0, m_noise_std);
+    meas.theta = psi + compass_dis(m_rand_gen);
     return meas;
 }
 

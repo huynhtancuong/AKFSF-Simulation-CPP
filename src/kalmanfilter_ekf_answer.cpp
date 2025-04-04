@@ -60,7 +60,8 @@ void KalmanFilter::handleLidarMeasurement(LidarMeasurement meas, const BeaconMap
 
             // Measurement Model Sensitivity Matrix
             MatrixXd H = MatrixXd(2,4);
-            H << -delta_x/zhat_range,-delta_y/zhat_range,0,0,delta_y/zhat_range/zhat_range,-delta_x/zhat_range/zhat_range,-1,0;
+            H << -delta_x/zhat_range,-delta_y/zhat_range,0,0,
+                delta_y/zhat_range/zhat_range,-delta_x/zhat_range/zhat_range,-1,0;
 
             // Generate Measurement Model Noise Covariance Matrix
             MatrixXd R = Matrix2d::Zero();

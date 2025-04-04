@@ -8,15 +8,25 @@
 
 struct VehicleState
 {
-    double x,y,psi,V,accel;
+    double x,y,theta,V,accel;
     double yaw_rate;
-    VehicleState():x(0.0), y(0.0), psi(0.0), V(0.0), yaw_rate(0.0) {}
-    VehicleState(double setX, double setY, double setPsi, double setV):
-        x(setX), y(setY), psi(setPsi), V(setV), yaw_rate(0.0) {}
-    VehicleState(double setX, double setY, double setPsi, double setV, double setPsiDot):
-        x(setX), y(setY), psi(setPsi), V(setV), yaw_rate(setPsiDot) {}
-    VehicleState(double set_x, double set_y, double psi, double set_v, double omega, double accel):
-        x(set_x), y(set_y), psi(psi), V(set_v), yaw_rate(omega), accel(accel) {}
+    double right_wheel_velocity, left_wheel_velocity;
+    double base_wheel_distance;
+    VehicleState():x(0.0), y(0.0), theta(0.0), V(0.0), yaw_rate(0.0) {}
+
+    VehicleState(double set_x, double set_y, double theta, double set_v, double omega, double accel,
+                 double m_right_wheel_velocity, double m_left_wheel_velocity, double base_wheel_distance):
+        x(set_x), y(set_y), theta(theta), V(set_v), yaw_rate(omega), accel(accel),
+        right_wheel_velocity(m_right_wheel_velocity), left_wheel_velocity(m_left_wheel_velocity),
+        base_wheel_distance(base_wheel_distance){}
+
+    VehicleState(double set_x, double set_y, double theta, double V):
+        x(set_x), y(set_y), theta(theta), V(V), accel(0.0), yaw_rate(0.0),
+        right_wheel_velocity(0.0), left_wheel_velocity(0.0), base_wheel_distance(4.0) {}
+
+    VehicleState(double set_x, double set_y, double theta, double V, double set_yaw_rate):
+        x(set_x), y(set_y), theta(theta), V(V), accel(0.0), yaw_rate(set_yaw_rate),
+        right_wheel_velocity(0.0), left_wheel_velocity(0.0), base_wheel_distance(4.0) {}
 };
 
 class MotionCommandBase
@@ -53,7 +63,7 @@ class MotionCommandTurnTo : public MotionCommandBase
     MotionCommandTurnTo(double command_heading, double command_velocity):m_command_heading(command_heading),m_command_velocity(command_velocity){}
     bool update(double time, double dt, VehicleState state)
     {
-        double angle_error = wrapAngle(m_command_heading - state.psi);
+        double angle_error = wrapAngle(m_command_heading - state.theta);
         double m_steering_command = angle_error * (std::signbit(state.V) ? -1.0 : 1.0);
         m_left_wheel_velocity = m_command_velocity - (m_steering_command * state.V / 2.0);
         m_right_wheel_velocity = m_command_velocity + (m_steering_command * state.V / 2.0);
@@ -73,7 +83,7 @@ class MotionCommandMoveTo : public MotionCommandBase
         double delta_y = m_command_y - state.y;
         double range = sqrt(delta_x*delta_x + delta_y*delta_y);
         double angle_command = atan2(delta_y,delta_x);
-        double psi = wrapAngle(state.psi - (std::signbit(state.V) ?M_PI:0.0));
+        double psi = wrapAngle(state.theta - (std::signbit(state.V) ?M_PI:0.0));
         double angle_error = wrapAngle(angle_command - psi);
         double steering_command = angle_error * (std::signbit(state.V)?-1.0:1.0);
         m_left_wheel_velocity = m_command_velocity - (steering_command * state.V / 2.0);
@@ -102,16 +112,15 @@ public:
 
     void update(double dt) {
         double v = (m_left_wheel_velocity + m_right_wheel_velocity) / 2.0;
-        double omega = (m_right_wheel_velocity - m_left_wheel_velocity) / m_wheel_base;
+        double omega = (m_current_state.right_wheel_velocity - m_current_state.left_wheel_velocity) / m_wheel_base;
         double accel = (v - m_current_state.V) / dt;
 
-        double cosPsi = cos(m_current_state.psi);
-        double sinPsi = sin(m_current_state.psi);
+        double cosPsi = cos(m_current_state.theta);
+        double sinPsi = sin(m_current_state.theta);
         double x = m_current_state.x + v * cosPsi * dt;
         double y = m_current_state.y + v * sinPsi * dt;
-        double psi = wrapAngle(m_current_state.psi + omega * dt);
-
-        m_current_state = VehicleState(x, y, psi, v, omega, accel);
+        double psi = wrapAngle(m_current_state.theta + omega * dt);
+        m_current_state = VehicleState(x, y, psi, v, omega, accel, m_right_wheel_velocity, m_left_wheel_velocity, m_wheel_base);
     }
 
 
@@ -119,6 +128,8 @@ public:
         m_left_wheel_velocity = left;
         m_right_wheel_velocity = right;
     }
+
+    double getBaseWheelDistance() const { return m_wheel_base; }
 
     VehicleState getVehicleState() const { return m_current_state; }
 
@@ -190,7 +201,7 @@ class Car
 
         void render(Display& disp)
         {
-            double carPsiOffset = m_vehicle_model.getVehicleState().psi;
+            double carPsiOffset = m_vehicle_model.getVehicleState().theta;
             Vector2 carPosOffset = Vector2(m_vehicle_model.getVehicleState().x, m_vehicle_model.getVehicleState().y);
             
             disp.setDrawColour(0,255,0);
