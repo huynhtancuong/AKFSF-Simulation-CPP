@@ -19,7 +19,7 @@ using Eigen::Matrix4d;
 class KalmanFilterBase
 {
 public:
-    KalmanFilterBase():m_initialised(false){}
+    KalmanFilterBase(std::string set_name):m_initialised(false), m_name(set_name){}
     virtual ~KalmanFilterBase(){}
     void reset(){m_initialised = false;}
     bool isInitialised() const {return m_initialised;}
@@ -36,6 +36,7 @@ public:
     virtual void handleLidarMeasurement(LidarMeasurement meas, const BeaconMap& map) = 0;
     virtual void handleGPSMeasurement(GPSMeasurement meas) = 0;
     virtual void handleCompassMeasurement(CompassMeasurement meas) = 0;
+    virtual std::string getName() const {return m_name;}
 
 
 protected:
@@ -48,12 +49,13 @@ private:
     bool m_initialised;
     VectorXd m_state;
     MatrixXd m_covariance;
+    std::string m_name;
 };
 
 class KalmanFilterLKF : public KalmanFilterBase
 {
 public:
-
+    KalmanFilterLKF(std::string name): KalmanFilterBase(name){}
     VehicleState getVehicleState() override;
     Matrix2d getVehicleStatePositionCovariance() override;
 
@@ -71,7 +73,7 @@ public:
 class KalmanFilterEKF : public KalmanFilterBase
 {
 public:
-
+    KalmanFilterEKF(std::string name): KalmanFilterBase(name){}
     VehicleState getVehicleState() override;
     Matrix2d getVehicleStatePositionCovariance() override;
 
@@ -90,6 +92,7 @@ public:
 class KalmanFilterUKF : public KalmanFilterBase
 {
 public:
+    KalmanFilterUKF(std::string name): KalmanFilterBase(name){}
 
     VehicleState getVehicleState() override;
     Matrix2d getVehicleStatePositionCovariance() override;
@@ -108,6 +111,7 @@ public:
 class OdometryFilter : public KalmanFilterBase
 {
 public:
+    OdometryFilter(std::string name): KalmanFilterBase(name){}
 
     VehicleState getVehicleState() override;
     Matrix2d getVehicleStatePositionCovariance() override;

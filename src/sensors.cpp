@@ -2,9 +2,12 @@
 #include "beacons.h"
 #include "utils.h"
 
+// Random Number Generation
+std::mt19937 rand_gen = std::mt19937(0);
+
 // GPS Sensor
-GPSSensor::GPSSensor():m_rand_gen(std::mt19937()),m_noise_std(0.0),m_error_prob(0.0),m_gps_denied_x(0.0),m_gps_denied_y(0.0),m_gps_denied_range(-1.0){}
-void GPSSensor::reset(){m_rand_gen = std::mt19937();}
+GPSSensor::GPSSensor():m_rand_gen(rand_gen),m_noise_std(0.0),m_error_prob(0.0),m_gps_denied_x(0.0),m_gps_denied_y(0.0),m_gps_denied_range(-1.0){}
+void GPSSensor::reset(){m_rand_gen = rand_gen;}
 void GPSSensor::setGPSNoiseStd(double std){m_noise_std = std;}
 void GPSSensor::setGPSErrorProb(double prob){m_error_prob = prob;}
 void GPSSensor::setGPSDeniedZone(double x, double y, double r){m_gps_denied_x = x; m_gps_denied_y = y; m_gps_denied_range = r;}
@@ -25,8 +28,8 @@ GPSMeasurement GPSSensor::generateGPSMeasurement(double sensor_x, double sensor_
 
 
 // Lidar Sensor
-LidarSensor::LidarSensor():m_rand_gen(std::mt19937()),m_range_noise_std(0.0),m_theta_noise_std(0.0),m_max_range(90.0),m_id_enabled(true){}
-void LidarSensor::reset(){m_rand_gen = std::mt19937();}
+LidarSensor::LidarSensor():m_rand_gen(rand_gen),m_range_noise_std(0.0),m_theta_noise_std(0.0),m_max_range(90.0),m_id_enabled(true){}
+void LidarSensor::reset(){m_rand_gen = rand_gen;}
 void LidarSensor::setLidarNoiseStd(double range_std, double theta_std){m_range_noise_std = range_std;m_theta_noise_std = theta_std;}
 void LidarSensor::setLidarMaxRange(double range){m_max_range = range;}
 void LidarSensor::setLidarDAEnabled(bool id_enabled){m_id_enabled = id_enabled;}
@@ -55,9 +58,9 @@ std::vector<LidarMeasurement> LidarSensor::generateLidarMeasurements(double sens
 
 // IMU Sensor
 IMUSensor::IMUSensor():
-    m_rand_gen(std::mt19937()),m_accel_noise_std(0.0), m_gyro_noise_std(0.0) {}
+    m_rand_gen(rand_gen),m_accel_noise_std(0.0), m_gyro_noise_std(0.0) {}
 void IMUSensor::reset() {
-    m_rand_gen = std::mt19937();
+    m_rand_gen = rand_gen;
 }
 void IMUSensor::setAccelNoiseStd(double std) {
     m_accel_noise_std = std;
@@ -82,9 +85,9 @@ IMUMeasurement IMUSensor::generateIMUMeasurement(double sensor_accel, double sen
 
 // Wheels Speed Sensor
 WheelsSpeedSensor::WheelsSpeedSensor():
-    m_rand_gen(std::mt19937()),m_noise_std(0.0) {}
+    m_rand_gen(rand_gen),m_noise_std(0.0) {}
 void WheelsSpeedSensor::reset() {
-    m_rand_gen = std::mt19937();
+    m_rand_gen = rand_gen;
 }
 void WheelsSpeedSensor::setOdometerNoiseStd(double std) {
     m_noise_std = std;
@@ -100,9 +103,9 @@ WheelsSpeedMeasurement WheelsSpeedSensor::generateWheelsSpeedMeasurement(double 
 
 // Compass Sensor
 CompassSensor::CompassSensor():
-    m_rand_gen(std::mt19937()),m_noise_std(0.0) {}
+    m_rand_gen(rand_gen),m_noise_std(0.0) {}
 void CompassSensor::reset() {
-    m_rand_gen = std::mt19937();
+    m_rand_gen = rand_gen;
 }
 void CompassSensor::setCompassNoiseStd(double std) {
     m_noise_std = std;

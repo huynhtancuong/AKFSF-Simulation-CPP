@@ -11,9 +11,9 @@
 
 // -------------------------------------------------- //
 // YOU CAN USE AND MODIFY THESE CONSTANTS HERE
-constexpr double ACCEL_STD = 0.01;
-constexpr double GYRO_STD = 0.01;
-constexpr double WHEEL_SPEED_STD = 1.0;
+constexpr double ACCEL_STD = 0.001;
+constexpr double GYRO_STD = 0.001;
+constexpr double WHEEL_SPEED_STD = 0.5;
 constexpr double COMPASS_STD = 0.1;
 constexpr double GPS_POS_STD = 3.0;
 constexpr double LIDAR_RANGE_STD = 3.0;
@@ -24,7 +24,7 @@ constexpr double INIT_THETA_STD = 90.0/180.0 * M_PI;
 constexpr double INIT_OMEGA_STD = 1.0/180.0 *M_PI;
 constexpr double INIT_POS_STD = 10.0;
 
-constexpr double PROCESS_NOISE_POS_STD = 0.01;
+constexpr double PROCESS_NOISE_POS_STD = 0.0;
 constexpr double PROCESS_NOISE_VEL_STD = 0.01;
 constexpr double PROCESS_NOISE_THETA_STD = 0.01;
 constexpr double PROCESS_NOISE_OMEGA_STD = 0.01;
@@ -33,7 +33,7 @@ constexpr double PROCESS_NOISE_OMEGA_STD = 0.01;
 constexpr bool INIT_ON_FIRST_PREDICTION = false;
 // -------------------------------------------------- //
 
-MatrixXd getProcessStateJacobianMatrix(const VectorXd& state, const double dt)
+static MatrixXd getProcessStateJacobianMatrix(const VectorXd& state, const double dt)
 {
     size_t n = state.size();
     double theta = state[2];
@@ -49,7 +49,7 @@ MatrixXd getProcessStateJacobianMatrix(const VectorXd& state, const double dt)
     return F;
 }
 
-MatrixXd getProcessModelNoiseCovarianceMatrix()
+static MatrixXd getProcessModelNoiseCovarianceMatrix()
 {
     MatrixXd Q = MatrixXd::Zero(5, 5);
     Q <<    PROCESS_NOISE_POS_STD * PROCESS_NOISE_POS_STD, 0, 0, 0, 0,
@@ -67,7 +67,6 @@ void KalmanFilterEKF::predictionStep(double dt)
         VectorXd state = getState();
         MatrixXd cov = getCovariance();
 
-        size_t n = state.size();
         double px = state[0];
         double py = state[1];
         double theta = state[2];
@@ -122,13 +121,12 @@ void KalmanFilterEKF::predictionStep(IMUMeasurement accel, double dt)
         double py = state[1];
         double theta = state[2];
         double V = state[3];
-        double omega = state[4];
+        double omega = accel.yaw_rate;
 
         px = px + V * dt * cos(theta);
         py = py + V * dt * sin(theta);
         theta = wrapAngle(theta + omega * dt);
         V = V + accel.accel * dt;
-        omega = accel.yaw_rate;
 
         // std::cout << accel.accel << std::endl;
 
@@ -137,7 +135,7 @@ void KalmanFilterEKF::predictionStep(IMUMeasurement accel, double dt)
         MatrixXd N = MatrixXd::Zero(n,n); // Process input covariance matrix
         MatrixXd Q = getProcessModelNoiseCovarianceMatrix(); // Process noise covariance matrix
         N(3,3) = ACCEL_STD * ACCEL_STD * dt * dt;
-        N(4,4) = GYRO_STD * GYRO_STD * dt * dt;
+        N(4,4) = GYRO_STD * GYRO_STD;
 
 
         state << px, py, theta, V, omega;
@@ -280,8 +278,8 @@ void KalmanFilterEKF::handleGPSMeasurement(GPSMeasurement meas)
 
         state(0) = meas.x;
         state(1) = meas.y;
-        state(2) = 45*M_PI/180.0;
-        state(3) = 5;
+        state(2) = 0.0;
+        state(3) = 0.0;
         state(4) = 0;
         cov(0,0) = GPS_POS_STD*GPS_POS_STD;
         cov(1,1) = GPS_POS_STD*GPS_POS_STD;
@@ -309,7 +307,7 @@ void KalmanFilterEKF::handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas)
         VectorXd z = VectorXd::Zero(2);
         z << meas.right_wheel_vel, meas.left_wheel_vel;
 
-        // Measurement Jacobian Matrix
+        // Measurement Model
         MatrixXd H = MatrixXd::Zero(2, n);
         H <<    0, 0, 0, 1, l/2.0,
                 0, 0, 0, 1, -l/2.0;

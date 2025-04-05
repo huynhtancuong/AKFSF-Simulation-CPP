@@ -51,6 +51,11 @@ class Display
         double getScreenAspectRatio() const {return getScreenWidth()/getScreenHeight(); }
 
         void drawText_MainFont(const std::string text, const Vector2 pos, const double scale = 1, const SDL_Color color = {0,0,0}, bool centered = false );
+        void drawText_Color_Condition(const std::string text, const Vector2 pos, const bool condition)
+        {
+            SDL_Color color = (condition ? SDL_Color{0,255,0} : SDL_Color{255,0,0});
+            drawText_MainFont(text, pos, 1.0, color);
+        }
 
         void setDrawColour(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha=0xFF);
         void setView(double width, double height, double xOffset, double yOffset);

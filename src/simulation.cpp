@@ -5,6 +5,10 @@
 
 Simulation::Simulation():
     m_sim_parameters(SimulationParams()),
+    m_odometry_filter(OdometryFilter("Odometry")),
+    m_kalman_filter_lkf(KalmanFilterLKF("Linear Kalman Filter")),
+    m_kalman_filter_ekf(KalmanFilterEKF("Extended Kalman Filter")),
+    m_kalman_filter_ukf(KalmanFilterUKF("Unscented Kalman Filter")),
     m_selected_filter(&m_kalman_filter_ekf),
     m_is_paused(false),
     m_is_running(false),
@@ -252,39 +256,42 @@ void Simulation::render(Display& disp)
     // Simulation Status / Parameters
     x_offset = 10;
     y_offset = 30;
-    std::string time_string = string_format("Time: %0.2f (x%d)",m_time,m_time_multiplier);
-    std::string profile_string = string_format("Profile: %s", m_sim_parameters.profile_name.c_str());
-    std::string gps_string = string_format("GPS [g]: %s (%0.1f Hz)", (m_sim_parameters.gps_enabled ? "ON" : "OFF"), m_sim_parameters.gps_update_rate);
-    std::string lidar_string = string_format("LIDAR [d]: %s (%0.1f Hz) ", (m_sim_parameters.lidar_enabled ? "ON" : "OFF"), m_sim_parameters.lidar_update_rate);
-    std::string imu_string = string_format("IMU [i]: %s (%0.1f Hz)", (m_sim_parameters.imu_enabled ? "ON" : "OFF"), m_sim_parameters.imu_update_rate);
-    std::string compass_string = string_format("Compass [c]: %s (%0.1f Hz)", (m_sim_parameters.compass_enabled ? "ON" : "OFF"), m_sim_parameters.compass_update_rate);
-    std::string wheelencoder_string = string_format("Wheel Encoder [w]: %s (%0.1f Hz)", (m_sim_parameters.wheelspeed_enabled ? "ON" : "OFF"), m_sim_parameters.wheelspeed_update_rate);
-    disp.drawText_MainFont(profile_string,Vector2(x_offset,y_offset+stride*-1),1.0,{255,255,255});
-    disp.drawText_MainFont(time_string,Vector2(x_offset,y_offset+stride*0),1.0,{255,255,255});
-    disp.drawText_MainFont(gps_string,Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
-    disp.drawText_MainFont(lidar_string,Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
-    disp.drawText_MainFont(imu_string,Vector2(x_offset,y_offset+stride*3),1.0,{255,255,255});
-    disp.drawText_MainFont(compass_string,Vector2(x_offset,y_offset+stride*4),1.0,{255,255,255});
-    disp.drawText_MainFont(wheelencoder_string,Vector2(x_offset,y_offset+stride*5),1.0,{255,255,255});
-    if (m_is_paused){disp.drawText_MainFont("PAUSED",Vector2(x_offset,y_offset+stride*6),1.0,{255,0,0});}
-    if (!m_is_running){disp.drawText_MainFont("FINISHED",Vector2(x_offset,y_offset+stride*7),1.0,{255,0,0});}
+    int line_num = -1;
+    std::string profile_string =        string_format("Profile: %s", m_sim_parameters.profile_name.c_str());
+    std::string filter_type_string =    "Current Filter Type: " + m_selected_filter->getName();
+    std::string time_string =           string_format("Time: %0.2f (x%d)",m_time,m_time_multiplier);
+    std::string sensors_string =        "Sensors: ";
+    std::string gps_string =            string_format("                      GPS [g]: %s (%0.1f Hz)", (m_sim_parameters.gps_enabled ? "ON" : "OFF"), m_sim_parameters.gps_update_rate);
+    std::string lidar_string =          string_format("                  LIDAR [d]: %s (%0.1f Hz) ", (m_sim_parameters.lidar_enabled ? "ON" : "OFF"), m_sim_parameters.lidar_update_rate);
+    std::string imu_string =            string_format("                        IMU [i]: %s (%0.1f Hz)", (m_sim_parameters.imu_enabled ? "ON" : "OFF"), m_sim_parameters.imu_update_rate);
+    std::string compass_string =        string_format("            Compass [c]: %s (%0.1f Hz)", (m_sim_parameters.compass_enabled ? "ON" : "OFF"), m_sim_parameters.compass_update_rate);
+    std::string wheelencoder_string =   string_format("Wheel Encoder [w]: %s (%0.1f Hz)", (m_sim_parameters.wheelspeed_enabled ? "ON" : "OFF"), m_sim_parameters.wheelspeed_update_rate);
+    disp.drawText_MainFont(profile_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
+    disp.drawText_MainFont(filter_type_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,0});
+    disp.drawText_MainFont(time_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
+    disp.drawText_MainFont(sensors_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
+    disp.drawText_Color_Condition(gps_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.gps_enabled);
+    disp.drawText_Color_Condition(lidar_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.lidar_enabled);
+    disp.drawText_Color_Condition(imu_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.imu_enabled);
+    disp.drawText_Color_Condition(compass_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.compass_enabled);
+    disp.drawText_Color_Condition(wheelencoder_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.wheelspeed_enabled);
+    if (m_is_paused){disp.drawText_MainFont("PAUSED",Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,0,0});}
+    if (!m_is_running){disp.drawText_MainFont("FINISHED",Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,0,0});}
 
     // Vehicle State
     x_offset = 800;
     y_offset = 10;
-    std::string velocity_string = string_format("    Velocity: %0.2f m/s",m_car.getVehicleState().V);
-    std::string yaw_string = string_format("   Heading: %0.2f deg",m_car.getVehicleState().theta * 180.0/M_PI);
-    std::string yaw_rate_string = string_format("   Yaw Rate: %0.5f deg/s",m_car.getVehicleState().yaw_rate * 180.0/M_PI);
-    std::string xpos = string_format("X Position: %0.2f m",m_car.getVehicleState().x);
-    std::string ypos = string_format("Y Position: %0.2f m",m_car.getVehicleState().y);
-    std::string accel_string = string_format("   Accel: %0.5f m/s^2",m_car.getVehicleState().accel);
+    std::string velocity_string =       string_format("    Velocity: %0.2f m/s",m_car.getVehicleState().V);
+    std::string yaw_string =            string_format("   Heading: %0.2f deg",m_car.getVehicleState().theta * 180.0/M_PI);
+    std::string yaw_rate_string =       string_format(" Yaw Rate: %0.2f deg/s",m_car.getVehicleState().yaw_rate * 180.0/M_PI);
+    std::string xpos =                  string_format("X Position: %0.2f m",m_car.getVehicleState().x);
+    std::string ypos =                  string_format("Y Position: %0.2f m",m_car.getVehicleState().y);
     disp.drawText_MainFont("Vehicle State",Vector2(x_offset-5,y_offset+stride*0),1.0,{255,255,255});
     disp.drawText_MainFont(velocity_string,Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
     disp.drawText_MainFont(yaw_string,Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
     disp.drawText_MainFont(xpos,Vector2(x_offset,y_offset+stride*3),1.0,{255,255,255});
     disp.drawText_MainFont(ypos,Vector2(x_offset,y_offset+stride*4),1.0,{255,255,255});
-    disp.drawText_MainFont(accel_string,Vector2(x_offset,y_offset+stride*5),1.0,{255,255,255});
-    disp.drawText_MainFont(yaw_rate_string,Vector2(x_offset,y_offset+stride*6),1.0,{255,255,255});
+    disp.drawText_MainFont(yaw_rate_string,Vector2(x_offset,y_offset+stride*5),1.0,{255,255,255});
 
     std::string kf_velocity_string = string_format("    Velocity: %0.2f m/s",m_selected_filter->getVehicleState().V);
     std::string kf_yaw_string = string_format("   Heading: %0.2f deg",m_selected_filter->getVehicleState().theta * 180.0/M_PI);
@@ -301,6 +308,7 @@ void Simulation::render(Display& disp)
     // Keyboard Input
     x_offset = 10;
     y_offset = 650;
+    disp.drawText_MainFont("Select Filter Type: (O/L/E/U)",Vector2(x_offset,y_offset+stride*-1),1.0,{255,255,255});
     disp.drawText_MainFont("Reset Key: r",Vector2(x_offset,y_offset+stride*0),1.0,{255,255,255});
     disp.drawText_MainFont("Pause Key: [space bar]",Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
     disp.drawText_MainFont("Speed Multiplier (+/-) Key: [ / ] ",Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
@@ -359,18 +367,38 @@ void Simulation::selectFilter(unsigned int index)
         case 0:
             m_selected_filter = &m_kalman_filter_lkf;
             std::cout << "Simulation: Selected LKF" << std::endl;
+            m_sim_parameters.compass_enabled = false;
+            m_sim_parameters.gps_enabled = true;
+            m_sim_parameters.imu_enabled = false;
+            m_sim_parameters.lidar_enabled = false;
+            m_sim_parameters.wheelspeed_enabled = false;
             break;
         case 1:
             m_selected_filter = &m_kalman_filter_ekf;
             std::cout << "Simulation: Selected EKF" << std::endl;
+            m_sim_parameters.compass_enabled = true;
+            m_sim_parameters.gps_enabled = true;
+            m_sim_parameters.imu_enabled = true;
+            m_sim_parameters.lidar_enabled = false;
+            m_sim_parameters.wheelspeed_enabled = true;
             break;
         case 2:
             m_selected_filter = &m_kalman_filter_ukf;
             std::cout << "Simulation: Selected UKF" << std::endl;
+            m_sim_parameters.compass_enabled = true;
+            m_sim_parameters.gps_enabled = true;
+            m_sim_parameters.imu_enabled = true;
+            m_sim_parameters.lidar_enabled = false;
+            m_sim_parameters.wheelspeed_enabled = true;
             break;
         case 3:
             m_selected_filter = &m_odometry_filter;
             std::cout << "Simulation: Selected Odometry Filter" << std::endl;
+            m_sim_parameters.compass_enabled = false;
+            m_sim_parameters.gps_enabled = true;
+            m_sim_parameters.imu_enabled = false;
+            m_sim_parameters.lidar_enabled = false;
+            m_sim_parameters.wheelspeed_enabled = true;
             break;
         default: ;
     }
