@@ -60,13 +60,14 @@ class Display
         void setDrawColour(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha=0xFF);
         void setView(double width, double height, double xOffset, double yOffset);
         void setView(double xOffset, double yOffset);
-        void drawLine(const Vector2& startPos, const Vector2& endPos);
-        void drawLines(const std::vector<Vector2> &points);
-        void drawLines(const std::vector<std::vector<Vector2>>& points);
+        void drawLine(const Vector2& startPos, const Vector2& endPos, int thickness = 1);
+        void drawLines(const std::vector<Vector2> &points, int thickness = 1);
+        void drawLines(const std::vector<std::vector<Vector2>>& points, int thickness = 1);
 
     private:
 
         Vector2 transformPoint(const Vector2& point);
+        void drawThickLine(const Vector2& startPos, const Vector2& endPos, int thickness);
 
         int mScreenWidth;
         int mScreenHeight;

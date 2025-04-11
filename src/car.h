@@ -150,11 +150,11 @@ class Car
         Car():m_vehicle_model(),m_current_command(nullptr)
         {
             // Create Display Geometry
-            m_car_lines_body = {{1,0},{0.707,0.707},{0,1},{-0.707,0.707},{-1,0},{-0.707,-0.707},{0,-1},{0.707,-0.707},{1,0}};
-            m_marker_lines = {{{0.5,0.5},{-0.5,-0.5}}, {{0.5,-0.5},{-0.5,0.5}}, {{0,0},{3.5,0}}};
-            m_wheel_lines = {{-0.6,0.3},{0.6, 0.3},{0.6, -0.3},{-0.6, -0.3},{-0.6, 0.3}};
-            m_wheel_left_offset = Vector2(0, -1.6);
-            m_wheel_right_offset = Vector2(0, 1.6);
+            m_car_lines_body = {{2,1},{2,-1},{-1,-1},{-1,1},{2,1}};
+            m_marker_lines = {{{1,0.5},{-0.5,-0.5}}, {{1,-0.5},{-0.5,0.5}}, {{0,0},{3.5,0}}};
+            m_wheel_lines = {{-0.8,0.4},{0.8, 0.4},{0.8, -0.4},{-0.8, -0.4},{-0.8, 0.4}};
+            m_wheel_left_offset = Vector2(0, -3.5);
+            m_wheel_right_offset = Vector2(0, 3.5);
         }
 
         void reset(double x0, double y0, double psi0, double V0)
@@ -204,13 +204,15 @@ class Car
             double carPsiOffset = m_vehicle_model.getVehicleState().theta;
             Vector2 carPosOffset = Vector2(m_vehicle_model.getVehicleState().x, m_vehicle_model.getVehicleState().y);
             
+            // Draw car body with thicker lines
             disp.setDrawColour(0,255,0);
-            disp.drawLines(transformPoints(scalePoints(m_car_lines_body, 2.5), carPosOffset, carPsiOffset));
-            disp.drawLines(transformPoints(m_marker_lines, carPosOffset, carPsiOffset));
+            disp.drawLines(transformPoints(scalePoints(m_car_lines_body, 2.5), carPosOffset, carPsiOffset), 3);
+            disp.drawLines(transformPoints(m_marker_lines, carPosOffset, carPsiOffset), 2);
 
+            // Draw wheels with thicker lines
             disp.setDrawColour(0,201,0);
-            disp.drawLines(transformPoints(offsetPoints(m_wheel_lines, m_wheel_left_offset), carPosOffset, carPsiOffset));
-            disp.drawLines(transformPoints(offsetPoints(m_wheel_lines, m_wheel_right_offset), carPosOffset, carPsiOffset));
+            disp.drawLines(transformPoints(offsetPoints(scalePoints(m_wheel_lines, 1.5), m_wheel_left_offset), carPosOffset, carPsiOffset), 2);
+            disp.drawLines(transformPoints(offsetPoints(scalePoints(m_wheel_lines, 1.5), m_wheel_right_offset), carPosOffset, carPsiOffset), 2);
         }
 
     private:

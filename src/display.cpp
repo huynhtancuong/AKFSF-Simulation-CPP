@@ -119,15 +119,56 @@ void Display::setView(double xOffset, double yOffset)
 
 void Display::setDrawColour(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha){SDL_SetRenderDrawColor( mRenderer, red, green, blue, alpha );}
 
-void Display::drawLine(const Vector2& startPos, const Vector2& endPos)
+void Display::drawThickLine(const Vector2& startPos, const Vector2& endPos, int thickness)
 {
     Vector2 p1 = transformPoint(startPos);
     Vector2 p2 = transformPoint(endPos);
-    SDL_RenderDrawLine( mRenderer, p1.x, p1.y, p2.x, p2.y );
+    
+    // Calculate perpendicular vector
+    double dx = p2.x - p1.x;
+    double dy = p2.y - p1.y;
+    double length = sqrt(dx*dx + dy*dy);
+    if (length == 0) return;
+    
+    // Normalize and rotate 90 degrees
+    double nx = -dy/length;
+    double ny = dx/length;
+    
+    // Calculate half thickness
+    double halfThickness = thickness/2.0;
+    
+    // Draw multiple lines to create thickness
+    for (int i = -halfThickness; i <= halfThickness; i++) {
+        SDL_RenderDrawLine(mRenderer, 
+            p1.x + nx*i, p1.y + ny*i,
+            p2.x + nx*i, p2.y + ny*i);
+    }
 }
 
-void Display::drawLines(const std::vector<Vector2> &points){for (unsigned int i=1; i < points.size(); ++i){drawLine(points[i-1],points[i]);}}
-void Display::drawLines(const std::vector<std::vector<Vector2>>& dataset){for (const std::vector<Vector2>& points : dataset){drawLines(points);}}
+void Display::drawLine(const Vector2& startPos, const Vector2& endPos, int thickness)
+{
+    if (thickness <= 1) {
+        Vector2 p1 = transformPoint(startPos);
+        Vector2 p2 = transformPoint(endPos);
+        SDL_RenderDrawLine(mRenderer, p1.x, p1.y, p2.x, p2.y);
+    } else {
+        drawThickLine(startPos, endPos, thickness);
+    }
+}
+
+void Display::drawLines(const std::vector<Vector2> &points, int thickness)
+{
+    for (unsigned int i=1; i < points.size(); ++i) {
+        drawLine(points[i-1], points[i], thickness);
+    }
+}
+
+void Display::drawLines(const std::vector<std::vector<Vector2>>& dataset, int thickness)
+{
+    for (const std::vector<Vector2>& points : dataset) {
+        drawLines(points, thickness);
+    }
+}
 
 Vector2 Display::transformPoint(const Vector2& point)
 {

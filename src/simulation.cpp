@@ -195,11 +195,11 @@ void Simulation::render(Display& disp)
     m_car.render(disp);
     m_beacons.render(disp);
 
-    disp.setDrawColour(0,100,0);
-    disp.drawLines(m_vehicle_position_history);
+    disp.setDrawColour(0,150,0);
+    disp.drawLines(m_vehicle_position_history, 1);
 
-    disp.setDrawColour(100,0,0);
-    disp.drawLines(m_filter_position_history);
+    disp.setDrawColour(150,0,0);
+    disp.drawLines(m_filter_position_history, 1);
 
     if (m_selected_filter->isInitialised())
     {
@@ -215,12 +215,12 @@ void Simulation::render(Display& disp)
         std::vector<Vector2> marker_lines1_world = offsetPoints(marker_lines1, Vector2(x,y));
         std::vector<Vector2> marker_lines2_world = offsetPoints(marker_lines2, Vector2(x,y));
         disp.setDrawColour(255,0,0);
-        disp.drawLines(marker_lines1_world);
-        disp.drawLines(marker_lines2_world);
+        disp.drawLines(marker_lines1_world, 2);
+        disp.drawLines(marker_lines2_world, 2);
 
         std::vector<Vector2> cov_world = generateEllipse(x,y,sigma_xx,sigma_yy,sigma_xy);
         disp.setDrawColour(255,0,0);
-        disp.drawLines(cov_world);
+        disp.drawLines(cov_world, 2);
 
     }
 
