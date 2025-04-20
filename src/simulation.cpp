@@ -33,6 +33,10 @@ void Simulation::reset()
     m_is_running = true;
     m_is_paused = false;
     
+    // Reset CPU time tracking variables
+    m_cpu_times.clear();
+    m_cpu_time_avg = 0.0;
+    
     m_kalman_filter_lkf.reset();
     m_kalman_filter_ekf.reset();
     m_kalman_filter_ukf.reset();
@@ -82,6 +86,9 @@ void Simulation::update()
 {
     if (m_is_running && !m_is_paused)
     {
+        // Start timing this iteration
+        m_step_start_time = std::chrono::high_resolution_clock::now();
+        
         // Time Multiplier
         for (unsigned i = 0; i < m_time_multiplier; ++i)
         {
@@ -182,6 +189,21 @@ void Simulation::update()
             // Update Time
             m_time += m_sim_parameters.time_step;
         }
+                    
+                    // Calculate CPU time for this iteration
+                    auto end_time = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double, std::milli> elapsed = end_time - m_step_start_time;
+                    
+                    // Store CPU time in milliseconds
+                    m_cpu_times.push_back(elapsed.count());
+                    
+                    // Limit history to last 100 values to avoid excessive memory usage
+                    if (m_cpu_times.size() > 100)
+            m_cpu_times.erase(m_cpu_times.begin());
+                    
+                    // Calculate average CPU time
+                    if (!m_cpu_times.empty())
+            m_cpu_time_avg = std::accumulate(m_cpu_times.begin(), m_cpu_times.end(), 0.0) / m_cpu_times.size();
     }
 }
         
@@ -327,6 +349,12 @@ void Simulation::render(Display& disp)
     disp.drawText_MainFont(ypos_error_string,Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
     disp.drawText_MainFont(heading_error_string,Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
     disp.drawText_MainFont(velocity_error_string,Vector2(x_offset,y_offset+stride*3),1.0,{255,255,255});
+    
+    // CPU Time metrics
+    std::string current_cpu_time = string_format("Current CPU Time: %0.2f ms", m_cpu_times.empty() ? 0.0 : m_cpu_times.back());
+    std::string avg_cpu_time = string_format("Avg CPU Time: %0.2f ms", m_cpu_time_avg);
+    disp.drawText_MainFont(current_cpu_time,Vector2(x_offset,y_offset+stride*4),1.0,{255,255,255});
+    disp.drawText_MainFont(avg_cpu_time,Vector2(x_offset,y_offset+stride*5),1.0,{255,255,255});
 }
    
 void Simulation::reset(SimulationParams sim_params){m_sim_parameters = sim_params; reset();}

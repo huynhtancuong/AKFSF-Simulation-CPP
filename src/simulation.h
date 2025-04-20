@@ -1,6 +1,7 @@
 #ifndef INCLUDE_AKFSFSIM_SIMULATION_H
 #define INCLUDE_AKFSFSIM_SIMULATION_H
 
+#include <chrono>  // For high-resolution timing
 #include <memory>
 #include <vector>
 
@@ -118,6 +119,11 @@ class Simulation
         double m_time_till_compass_measurement;
         double m_time_till_wheelspeed_measurement;
         double m_time_till_imu_measurement;
+        
+        // CPU time tracking variables
+        std::chrono::high_resolution_clock::time_point m_step_start_time;
+        std::vector<double> m_cpu_times;
+        double m_cpu_time_avg;
 
         std::vector<GPSMeasurement> m_gps_measurement_history;
         std::vector<LidarMeasurement> m_lidar_measurement_history;
