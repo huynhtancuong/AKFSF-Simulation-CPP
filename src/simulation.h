@@ -131,8 +131,7 @@ class Simulation
         std::vector<Vector2> m_vehicle_position_history;
         std::vector<Vector2> m_filter_position_history;
 
-        std::vector<double> m_filter_error_x_position_history;
-        std::vector<double> m_filter_error_y_position_history;
+        std::vector<double> m_filter_error_position_history;
         std::vector<double> m_filter_error_heading_history;
         std::vector<double> m_filter_error_velocity_history;
 

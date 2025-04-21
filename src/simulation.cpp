@@ -73,8 +73,7 @@ void Simulation::reset()
     m_filter_position_history.clear();
 
     // Stats Variables
-    m_filter_error_x_position_history.clear();
-    m_filter_error_y_position_history.clear();
+    m_filter_error_position_history.clear();
     m_filter_error_heading_history.clear();
     m_filter_error_velocity_history.clear();
 
@@ -180,8 +179,13 @@ void Simulation::update()
                 VehicleState vehicle_state = m_car.getVehicleState();
                 VehicleState filter_state = m_selected_filter->getVehicleState();
                 m_filter_position_history.push_back(Vector2(filter_state.x, filter_state.y));
-                m_filter_error_x_position_history.push_back(filter_state.x - vehicle_state.x);
-                m_filter_error_y_position_history.push_back(filter_state.y - vehicle_state.y);
+                
+                // Calculate combined position error (Euclidean distance)
+                double pos_error_x = filter_state.x - vehicle_state.x;
+                double pos_error_y = filter_state.y - vehicle_state.y;
+                double pos_error = std::sqrt(pos_error_x*pos_error_x + pos_error_y*pos_error_y);
+                m_filter_error_position_history.push_back(pos_error);
+                
                 m_filter_error_heading_history.push_back(wrapAngle(filter_state.theta - vehicle_state.theta));
                 m_filter_error_velocity_history.push_back(filter_state.V - vehicle_state.V);
             }
@@ -341,20 +345,18 @@ void Simulation::render(Display& disp)
     // Filter Error State
     x_offset = 750;
     y_offset = 650;
-    std::string xpos_error_string = string_format("X Position RMSE: %0.2f m",calculateRMSE(m_filter_error_x_position_history));
-    std::string ypos_error_string = string_format("Y Position RMSE: %0.2f m",calculateRMSE(m_filter_error_y_position_history));
+    std::string pos_error_string = string_format("Position RMSE: %0.2f m",calculateRMSE(m_filter_error_position_history));
     std::string heading_error_string = string_format("   Heading RMSE: %0.2f deg",180.0 / M_PI * calculateRMSE(m_filter_error_heading_history));
     std::string velocity_error_string = string_format("    Velocity RMSE: %0.2f m/s",calculateRMSE(m_filter_error_velocity_history));
-    disp.drawText_MainFont(xpos_error_string,Vector2(x_offset,y_offset+stride*0),1.0,{255,255,255});
-    disp.drawText_MainFont(ypos_error_string,Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
-    disp.drawText_MainFont(heading_error_string,Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
-    disp.drawText_MainFont(velocity_error_string,Vector2(x_offset,y_offset+stride*3),1.0,{255,255,255});
+    disp.drawText_MainFont(pos_error_string,Vector2(x_offset,y_offset+stride*0),1.0,{255,255,255});
+    disp.drawText_MainFont(heading_error_string,Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
+    disp.drawText_MainFont(velocity_error_string,Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
     
     // CPU Time metrics
     std::string current_cpu_time = string_format("Current CPU Time: %0.2f ms", m_cpu_times.empty() ? 0.0 : m_cpu_times.back());
     std::string avg_cpu_time = string_format("Avg CPU Time: %0.2f ms", m_cpu_time_avg);
-    disp.drawText_MainFont(current_cpu_time,Vector2(x_offset,y_offset+stride*4),1.0,{255,255,255});
-    disp.drawText_MainFont(avg_cpu_time,Vector2(x_offset,y_offset+stride*5),1.0,{255,255,255});
+    disp.drawText_MainFont(current_cpu_time,Vector2(x_offset,y_offset+stride*3),1.0,{255,255,255});
+    disp.drawText_MainFont(avg_cpu_time,Vector2(x_offset,y_offset+stride*4),1.0,{255,255,255});
 }
    
 void Simulation::reset(SimulationParams sim_params){m_sim_parameters = sim_params; reset();}
