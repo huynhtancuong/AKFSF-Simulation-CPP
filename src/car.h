@@ -46,7 +46,8 @@ class MotionCommandBase
 class MotionCommandStraight : public MotionCommandBase
 {
     public:
-    MotionCommandStraight(double command_time, double command_velocity):m_command_time(command_time),m_command_velocity(command_velocity){}
+    MotionCommandStraight(double command_time, double command_velocity):
+        m_command_time(command_time),m_command_velocity(command_velocity){}
     bool update(double time, double dt, VehicleState state)
     {
         m_left_wheel_velocity = m_command_velocity;
@@ -60,7 +61,8 @@ class MotionCommandStraight : public MotionCommandBase
 class MotionCommandTurnTo : public MotionCommandBase
 {
     public:
-    MotionCommandTurnTo(double command_heading, double command_velocity):m_command_heading(command_heading),m_command_velocity(command_velocity){}
+    MotionCommandTurnTo(double command_heading, double command_velocity):
+        m_command_heading(command_heading),m_command_velocity(command_velocity){}
     bool update(double time, double dt, VehicleState state)
     {
         double angle_error = wrapAngle(m_command_heading - state.theta);
@@ -76,7 +78,8 @@ class MotionCommandTurnTo : public MotionCommandBase
 class MotionCommandMoveTo : public MotionCommandBase
 {
     public:
-    MotionCommandMoveTo(double command_x, double command_y, double command_velocity):m_command_x(command_x),m_command_y(command_y),m_command_velocity(command_velocity){}
+    MotionCommandMoveTo(double command_x, double command_y, double command_velocity):
+        m_command_x(command_x),m_command_y(command_y),m_command_velocity(command_velocity){}
     bool update(double time, double dt, VehicleState state)
     {
         double delta_x = m_command_x - state.x;
@@ -94,10 +97,58 @@ class MotionCommandMoveTo : public MotionCommandBase
         double m_command_x, m_command_y, m_command_velocity;
 };
 
+class MotionCommandEightShape : public MotionCommandBase
+{
+public:
+    MotionCommandEightShape(double command_time, double command_velocity, double radius):
+        m_command_time(command_time),m_command_velocity(command_velocity),m_radius(radius){}
+    bool update(double time, double dt, VehicleState state)
+    {
+        if (time > m_start_time + m_command_time)
+        {
+            return true; // Command completed
+        }
+
+        // Calculate elapsed time since start of command
+        double elapsed_time = time - m_start_time;
+
+        // Calculate the phase within the figure-8 motion (0 to 2π)
+        double phase = 2.0 * M_PI * elapsed_time / m_command_time;
+
+        double px = m_radius * sin(phase);
+        double py = m_radius * sin(2.0 * phase);
+
+        // Calculate the desired heading angle
+        double delta_x = px - state.x;
+        double delta_y = py - state.y;
+        double range = sqrt(delta_x * delta_x + delta_y * delta_y);
+        if (range < 1)
+        {
+            m_left_wheel_velocity = 0.0;
+            m_right_wheel_velocity = 0.0;
+        }
+        else
+        {
+            double angle_command = atan2(delta_y, delta_x);
+            double angle_error = wrapAngle(angle_command - state.theta);
+            double steering_command = angle_error * (std::signbit(state.V) ? -1.0 : 1.0);
+            m_left_wheel_velocity = m_command_velocity - (steering_command * state.V / 2.0);
+            m_right_wheel_velocity = m_command_velocity + (steering_command * state.V / 2.0);
+        }
+
+
+        return false; // Command not completed yet
+    }
+
+private:
+    double m_command_time, m_command_velocity, m_radius;
+};
+
 class DifferentialDriveMobileRobot {
 public:
     DifferentialDriveMobileRobot() : m_initial_state(VehicleState(0, 0, 0, 0)), m_wheel_base(4.0) { reset(); }
-    DifferentialDriveMobileRobot(double x0, double y0, double psi0, double V0) : m_initial_state(VehicleState(x0, y0, psi0, V0)), m_wheel_base(4.0) { reset(); }
+    DifferentialDriveMobileRobot(double x0, double y0, double psi0, double V0) :
+        m_initial_state(VehicleState(x0, y0, psi0, V0)), m_wheel_base(4.0) { reset(); }
 
     void reset() {
         m_current_state = m_initial_state;

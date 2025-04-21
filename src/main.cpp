@@ -170,9 +170,10 @@ SimulationParams loadSimulation4Parameters()
 
 SimulationParams loadSimulation5Parameters()
 {    
-    SimulationParams sim_params = loadSimulation1Parameters();
-    sim_params.profile_name = "5 - Constant Velocity + LIDAR+ Zero Initial Conditions";
-    sim_params.lidar_enabled = true;
+    SimulationParams sim_params;
+    sim_params.profile_name = "5 - 8 Shape Profile";
+    sim_params.end_time = 500;
+    sim_params.car_commands.emplace_back(new MotionCommandEightShape(500, 4.5, 250));
     return sim_params;
 }
 
