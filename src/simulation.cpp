@@ -1,7 +1,9 @@
 
 #include "simulation.h"
 #include "utils.h"
-
+#include <cmath>
+#include <filesystem>
+#include <matplot/matplot.h>
 
 Simulation::Simulation():
     m_sim_parameters(SimulationParams()),
@@ -12,7 +14,7 @@ Simulation::Simulation():
     m_selected_filter(&m_kalman_filter_ekf),
     m_is_paused(false),
     m_is_running(false),
-    m_time_multiplier(1),
+    m_time_multiplier(5),
     m_view_size(100),
     m_time(0.0),
     m_time_till_gyro_measurement(0.0),
@@ -48,17 +50,23 @@ void Simulation::reset()
     m_gps_sensor.setGPSDeniedZone(m_sim_parameters.gps_denied_x, m_sim_parameters.gps_denied_y, m_sim_parameters.gps_denied_range);
 
     m_imu_sensor.reset();
+    m_imu_sensor.setErrorProb(m_sim_parameters.imu_error_probability);
     m_imu_sensor.setGyroNoiseStd(m_sim_parameters.gyro_noise_std);
     m_imu_sensor.setGyroBias(m_sim_parameters.gyro_bias);
     m_imu_sensor.setAccelNoiseStd(m_sim_parameters.accel_noise_std);
 
     m_wheelspeed_sensor.reset();
+    m_wheelspeed_sensor.setErrorProb(m_sim_parameters.wheelspeed_error_probability);
     m_wheelspeed_sensor.setOdometerNoiseStd(m_sim_parameters.wheelspeed_noise_std);
+    m_wheelspeed_sensor.setScalingFactor(m_sim_parameters.wheelspeed_scaling_factor);
 
     m_compass_sensor.reset();
+    m_compass_sensor.setErrorProb(m_sim_parameters.compass_error_probability);
     m_compass_sensor.setCompassNoiseStd(m_sim_parameters.compass_noise_std);
+    m_compass_sensor.setBias(m_sim_parameters.compass_bias);
 
     m_lidar_sensor.reset();
+    m_lidar_sensor.setLidarErrorProb(m_sim_parameters.lidar_error_probability);
     m_lidar_sensor.setLidarNoiseStd(m_sim_parameters.lidar_range_noise_std, m_sim_parameters.lidar_theta_noise_std);
     m_lidar_sensor.setLidarDAEnabled(m_sim_parameters.lidar_id_enabled);
 
@@ -80,6 +88,135 @@ void Simulation::reset()
     std::cout << "Simulation: Reset" << std::endl;
 }
 
+std::string Simulation::getSavePath()
+{
+    std::string path = "/home/huynh/repos/kalman-filter-course-udemy/simulation/images/"
+                        + m_sim_parameters.profile_name + "/" + m_selected_filter->getName() + "/";
+    // Replace space with underscore
+    path.replace(path.find(" - "), 3, "_");
+    std::replace(path.begin(), path.end(), ' ', '_');
+    return path;
+}
+
+void Simulation::save_plot(const std::string& filename)
+{
+    using namespace matplot;
+    std::string path = getSavePath() +  filename;
+    std::cout << "Saving plot to: " << path << std::endl;
+    // Create folder if it doesn't exist
+    std::filesystem::path dir(path);
+    if (!std::filesystem::exists(dir.parent_path()))
+    {
+        std::filesystem::create_directories(dir.parent_path());
+    }
+    // Save the current figure to a file
+    save(path);
+}
+
+void Simulation::save_metrics()
+{
+    // Save the metrics to a CSV file
+    std::string path = getSavePath() + "metrics.csv";
+    // Write to file
+    double position_RMSE = calculateRMSE(m_filter_error_position_history);
+    double heading_RMSE = calculateRMSE(m_filter_error_heading_history);
+    double cpu_time_avg = m_cpu_time_avg;
+
+    // Open file
+    std::ofstream file(path);
+    if (file.is_open())
+    {
+        // Write header
+        file << "Position RMSE,Heading RMSE,CPU Time Avg\n";
+        // Write data
+        file << position_RMSE << "," << heading_RMSE << "," << cpu_time_avg << "\n";
+        file.close();
+        std::cout << "Metrics saved to: " << path << std::endl;
+    }
+    else
+    {
+        std::cerr << "Error: Unable to open file " << path << std::endl;
+    }
+}
+
+void Simulation::plot_trajectory(std::vector<Vector2> m_vehicle_position_history, std::vector<Vector2> m_filter_position_history)
+{
+    using namespace matplot;
+
+    // Get the x and y coordinates of the vehicle position history
+    std::vector<double> true_x, true_y;
+    for (const auto& pos : m_vehicle_position_history)
+    {
+        true_x.push_back(pos.x);
+        true_y.push_back(pos.y);
+    }
+
+    // Get the x and y coordinates of the filter position history
+    std::vector<double> filter_x, filter_y;
+    for (const auto& pos : m_filter_position_history)
+    {
+        filter_x.push_back(pos.x);
+        filter_y.push_back(pos.y);
+    }
+
+    auto fig = figure(true);
+    fig->size(800, 800);
+    plot(true_x, true_y)->color("green").line_width(2).display_name("Ground Truth");
+    hold(on);
+    plot(filter_x, filter_y)->color("red").line_width(2).display_name("Estimation");
+    grid(on);
+    xlabel("x (m)");
+    ylabel("y (m)");
+    legend();
+    title("Vehicle Trajectory");
+    save_plot("trajectory.png");
+    // show();
+}
+
+void Simulation::plot_error(std::vector<double> m_filter_error_position_history, std::vector<double> m_filter_error_heading_history, std::vector<double> m_filter_error_velocity_history)
+{
+    using namespace matplot;
+
+    std::vector<double> time;
+    for (unsigned i = 0; i < m_filter_error_position_history.size(); ++i)
+    {
+        time.push_back(i/10.0);
+    }
+
+    auto fig = figure(true);
+    // fig->size(800, 1000);
+    // subplot(2, 1, 0);
+    hold(on);
+    plot(time, m_filter_error_position_history)->color("red").line_width(2);
+    grid(on);
+    xlabel("Time (s)");
+    ylabel("Meters");
+    title("Position Error");
+    save_plot("position_error.png");
+    // show();
+
+    auto fig2 = figure(true);
+    // subplot(2, 1, 1);
+    plot(time, m_filter_error_heading_history)->color("red").line_width(2);
+    hold(on);
+    plot(time, transform(m_filter_error_heading_history, [](double x) { return 0; }))->color("black").line_width(1).display_name("Zero Line");
+    title("Heading Error");
+    xlabel("Time (s)");
+    ylabel("Radians");
+    grid(on);
+    save_plot("heading_error.png");
+
+    // subplot(3, 1, 2);
+    // plot(time, m_filter_error_velocity_history)->color("red").line_width(1);
+    // hold(on);
+    // plot(time, transform(m_filter_error_heading_history, [](double x) { return 0; }))->color("black").line_width(1).display_name("Zero Line");
+    // title("Velocity Error");
+    // xlabel("Time (s)");
+    // ylabel("Meters/Second");
+    // grid(on);
+
+    // show();
+}
 
 void Simulation::update()
 {
@@ -96,6 +233,9 @@ void Simulation::update()
             {
                 m_is_running = false;
                 std::cout << "Simulation: Reached End of Simulation Time (" << m_time << ")" << std::endl;
+                plot_trajectory(m_vehicle_position_history, m_filter_position_history);
+                plot_error(m_filter_error_position_history, m_filter_error_heading_history, m_filter_error_velocity_history);
+                save_metrics();
                 return;
             }
 
@@ -120,7 +260,7 @@ void Simulation::update()
             }
 
 
-            // Wheelspeed Measurement
+            // Wheel Encoder Measurement
             if (m_sim_parameters.wheelspeed_enabled)
             {
                 if (m_time_till_wheelspeed_measurement <= 0)
@@ -194,19 +334,19 @@ void Simulation::update()
             m_time += m_sim_parameters.time_step;
         }
                     
-                    // Calculate CPU time for this iteration
-                    auto end_time = std::chrono::high_resolution_clock::now();
-                    std::chrono::duration<double, std::milli> elapsed = end_time - m_step_start_time;
-                    
-                    // Store CPU time in milliseconds
-                    m_cpu_times.push_back(elapsed.count());
-                    
-                    // Limit history to last 100 values to avoid excessive memory usage
-                    if (m_cpu_times.size() > 100)
+        // Calculate CPU time for this iteration
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> elapsed = end_time - m_step_start_time;
+
+        // Store CPU time in milliseconds
+        m_cpu_times.push_back(elapsed.count());
+
+        // Limit history to last 100 values to avoid excessive memory usage
+        if (m_cpu_times.size() > 100)
             m_cpu_times.erase(m_cpu_times.begin());
-                    
-                    // Calculate average CPU time
-                    if (!m_cpu_times.empty())
+
+        // Calculate average CPU time
+        if (!m_cpu_times.empty())
             m_cpu_time_avg = std::accumulate(m_cpu_times.begin(), m_cpu_times.end(), 0.0) / m_cpu_times.size();
     }
 }
@@ -346,7 +486,7 @@ void Simulation::render(Display& disp)
     x_offset = 750;
     y_offset = 650;
     std::string pos_error_string = string_format("Position RMSE: %0.2f m",calculateRMSE(m_filter_error_position_history));
-    std::string heading_error_string = string_format("   Heading RMSE: %0.2f deg",180.0 / M_PI * calculateRMSE(m_filter_error_heading_history));
+    std::string heading_error_string = string_format("   Heading RMSE: %0.2f rad",calculateRMSE(m_filter_error_heading_history));
     std::string velocity_error_string = string_format("    Velocity RMSE: %0.2f m/s",calculateRMSE(m_filter_error_velocity_history));
     disp.drawText_MainFont(pos_error_string,Vector2(x_offset,y_offset+stride*0),1.0,{255,255,255});
     disp.drawText_MainFont(heading_error_string,Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
@@ -406,20 +546,20 @@ void Simulation::selectFilter(unsigned int index)
         case 1:
             m_selected_filter = &m_kalman_filter_ekf;
             std::cout << "Simulation: Selected EKF" << std::endl;
-            m_sim_parameters.compass_enabled = true;
-            m_sim_parameters.gps_enabled = true;
-            m_sim_parameters.imu_enabled = true;
-            m_sim_parameters.lidar_enabled = false;
-            m_sim_parameters.wheelspeed_enabled = true;
+            // m_sim_parameters.compass_enabled = true;
+            // m_sim_parameters.gps_enabled = true;
+            // m_sim_parameters.imu_enabled = true;
+            // m_sim_parameters.lidar_enabled = false;
+            // m_sim_parameters.wheelspeed_enabled = true;
             break;
         case 2:
             m_selected_filter = &m_kalman_filter_ukf;
             std::cout << "Simulation: Selected UKF" << std::endl;
-            m_sim_parameters.compass_enabled = true;
-            m_sim_parameters.gps_enabled = true;
-            m_sim_parameters.imu_enabled = true;
-            m_sim_parameters.lidar_enabled = false;
-            m_sim_parameters.wheelspeed_enabled = true;
+            // m_sim_parameters.compass_enabled = true;
+            // m_sim_parameters.gps_enabled = true;
+            // m_sim_parameters.imu_enabled = true;
+            // m_sim_parameters.lidar_enabled = false;
+            // m_sim_parameters.wheelspeed_enabled = true;
             break;
         case 3:
             m_selected_filter = &m_odometry_filter;

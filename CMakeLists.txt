@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 11)
 
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
+add_subdirectory(libs/matplotplusplus)
+
 set(SRC_CPP
         src/main.cpp
         src/display.cpp
@@ -26,6 +28,7 @@ target_link_libraries(${PROJECT_NAME}
         SDL2
         SDL2_ttf
         Eigen3::Eigen
+        matplot
         )
 
 add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD

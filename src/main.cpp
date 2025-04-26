@@ -31,7 +31,7 @@ int main( int argc, char* args[] )
 {
     Display mDisplay;
     Simulation mSimulation;
-
+    
     // Start Graphics
     if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
     {
@@ -122,8 +122,17 @@ int main( int argc, char* args[] )
 SimulationParams loadSimulation1Parameters()
 {
     SimulationParams sim_params;
-    sim_params.profile_name = "1 - Constant Velocity + Zero Initial Conditions";
+    sim_params.profile_name = "1 - Ideal Conditions";
     sim_params.car_initial_velocity = 5;
+
+    sim_params.accel_noise_std = 0.0;
+    sim_params.gyro_noise_std = 0.0;
+    sim_params.compass_noise_std = 0.0;
+    sim_params.gps_position_noise_std = 0.0;
+    sim_params.lidar_range_noise_std = 0.0;
+    sim_params.lidar_theta_noise_std = 0.0;
+    sim_params.wheelspeed_noise_std = 0.0;
+
     sim_params.car_initial_psi = M_PI/180.0 * 45.0;
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(500,500,5));
     return sim_params;
@@ -132,39 +141,52 @@ SimulationParams loadSimulation1Parameters()
 SimulationParams loadSimulation2Parameters()
 {
     SimulationParams sim_params;
-    sim_params.profile_name = "2 - Constant Velocity + Non-zero Initial Conditions";
-    sim_params.car_initial_x = 500;
-    sim_params.car_initial_y = 500;
+    sim_params.profile_name = "2 - White Noise";
     sim_params.car_initial_velocity = 5;
-    sim_params.car_initial_psi = M_PI/180.0 * -135.0;
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,0,5));
+    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,0,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,0,4));
     return sim_params;
 }
 
 SimulationParams loadSimulation3Parameters()
 {
     SimulationParams sim_params;
-    sim_params.profile_name = "3 - Constant Speed Profile";
+    sim_params.profile_name = "3 - Outliers in Measurement";
+    // sim_params.end_time = 500;
+    sim_params.gps_error_probability = 0.05;
+    sim_params.wheelspeed_error_probability = 0.1;
+    sim_params.compass_error_probability = 0.05;
+    sim_params.imu_error_probability = 0.0;
+    sim_params.lidar_error_probability = 0.1;
+
     sim_params.car_initial_velocity = 5;
-    sim_params.car_initial_psi = M_PI/180.0 * 0.0;
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,5));
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,-100,5));
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,5));
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,0,5));
+    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,0,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,0,4));
     return sim_params;
 }
 
 SimulationParams loadSimulation4Parameters()
 {    
     SimulationParams sim_params;
-    sim_params.profile_name = "4 - Variable Speed Profile";
-    sim_params.end_time = 200;
-    sim_params.car_initial_velocity = 0;
-    sim_params.car_initial_psi = M_PI/180.0 * 0.0;
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,2));
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,-100,5));
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,7));
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,0,2));
+    sim_params.profile_name = "4 - Displacement and Drift of Data";
+
+    sim_params.gyro_bias = 0.05;
+    sim_params.wheelspeed_scaling_factor = 1.05;
+    sim_params.compass_bias = 0.05;
+
+    sim_params.car_initial_velocity = 5;
+    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,0,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,4));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,0,4));
+
     return sim_params;
 }
 
@@ -173,15 +195,22 @@ SimulationParams loadSimulation5Parameters()
     SimulationParams sim_params;
     sim_params.profile_name = "5 - 8 Shape Profile";
     sim_params.end_time = 500;
-    sim_params.car_commands.emplace_back(new MotionCommandEightShape(500, 4.5, 250));
+    sim_params.car_commands.emplace_back(new MotionCommandEightShape(500, 4, 250));
     return sim_params;
 }
 
 SimulationParams loadSimulation6Parameters()
 {    
-    SimulationParams sim_params = loadSimulation2Parameters();
-    sim_params.profile_name = "6 - Constant Velocity + LIDAR + Non-zero Initial Conditions";
-    sim_params.lidar_enabled = true;
+    SimulationParams sim_params;
+    sim_params.profile_name = "6 - Complex Trajectories";
+    sim_params.end_time = 200;
+    // sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,0,2));
+    // sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,0,6));
+    // sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,10));
+    // sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,6));
+    // sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,0,4));
+    sim_params.car_commands.emplace_back(new MotionCommandEightShape(120, 10, 50));
+
     return sim_params;
 }
 

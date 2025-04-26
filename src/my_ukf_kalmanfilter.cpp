@@ -11,9 +11,9 @@
 
 // -------------------------------------------------- //
 // YOU CAN USE AND MODIFY THESE CONSTANTS HERE
-constexpr double ACCEL_STD = 0.001;
-constexpr double GYRO_STD = 0.001;
-constexpr double WHEEL_SPEED_STD = 0.5;
+constexpr double ACCEL_STD = 0.05;
+constexpr double GYRO_STD = 0.05;
+constexpr double WHEEL_SPEED_STD = 0.05;
 constexpr double COMPASS_STD = 0.1;
 constexpr double GPS_POS_STD = 3.0;
 constexpr double LIDAR_RANGE_STD = 3.0;
@@ -25,10 +25,10 @@ constexpr double INIT_OMEGA_STD = 1.0/180.0 *M_PI;
 constexpr double INIT_POS_STD = 10.0;
 // -------------------------------------------------- //
 
-constexpr double PROCESS_NOISE_POS_STD = 0.0;
+constexpr double PROCESS_NOISE_POS_STD = 0.01;
 constexpr double PROCESS_NOISE_VEL_STD = 0.01;
 constexpr double PROCESS_NOISE_THETA_STD = 0.01;
-constexpr double PROCESS_NOISE_OMEGA_STD = GYRO_STD;
+constexpr double PROCESS_NOISE_OMEGA_STD = 0.01;
 constexpr double PROCESS_NOISE_ACCEL_STD = ACCEL_STD;
 
 // ----------------------------------------------------------------------- //
@@ -209,7 +209,7 @@ void KalmanFilterUKF::predictionStep(IMUMeasurement meas, double dt)
         for (size_t i = 0; i < sigmaPoints.size(); i++) {
             state += weights.at(i) * sigma_points_predict.at(i);
         }
-        state = normaliseState(std::move(state));
+        state(2) = wrapAngle(state(2)); // Wrap the angle to be within -pi to pi
 
         // Calculate the covariance matrix
         cov.setZero();
@@ -310,6 +310,8 @@ void KalmanFilterUKF::handleLidarMeasurement(LidarMeasurement meas, const Beacon
             // std::cout << "K:\n" << K << std::endl;
             state = state + K * y;
             cov = cov - K * S * K.transpose();
+
+            state(2) = wrapAngle(state(2)); // Wrap the angle to be within -pi to pi
 
         }
         // ----------------------------------------------------------------------- //

@@ -31,20 +31,26 @@ struct SimulationParams
     double lidar_update_rate;
     double lidar_range_noise_std;
     double lidar_theta_noise_std;
+    double lidar_error_probability;
 
     bool imu_enabled;
     double imu_update_rate;
+    double imu_error_probability;
     double accel_noise_std;
     double gyro_noise_std;
     double gyro_bias;
 
     bool compass_enabled;
+    double compass_error_probability;
     double compass_update_rate;
     double compass_noise_std;
+    double compass_bias;
 
     bool wheelspeed_enabled;
+    double wheelspeed_error_probability;
     double wheelspeed_update_rate;
     double wheelspeed_noise_std;
+    double wheelspeed_scaling_factor;
 
 
     double car_initial_x;
@@ -58,10 +64,10 @@ struct SimulationParams
         profile_name(""),
         time_step(0.1),end_time(120),
         gps_enabled(true), gps_update_rate(1.0), gps_position_noise_std(3), gps_error_probability(0.0),gps_denied_x(0.0),gps_denied_y(0.0),gps_denied_range(-1.0),
-        lidar_enabled(false), lidar_id_enabled(true), lidar_update_rate(10.0),lidar_range_noise_std(3),lidar_theta_noise_std(0.02),
-        compass_enabled(true), compass_update_rate(5.0), compass_noise_std(0.1),
-        wheelspeed_enabled(true), wheelspeed_update_rate(10.0), wheelspeed_noise_std(0.5),
-        imu_enabled(true), imu_update_rate(10.0), accel_noise_std(0.001),gyro_noise_std(0.001), gyro_bias(0.0),
+        lidar_enabled(true), lidar_id_enabled(true), lidar_update_rate(10.0),lidar_range_noise_std(3),lidar_theta_noise_std(0.02), lidar_error_probability(0.0),
+        compass_enabled(true), compass_update_rate(5.0), compass_noise_std(0.1), compass_error_probability(0.0), compass_bias(0.0),
+        wheelspeed_enabled(true), wheelspeed_update_rate(10.0), wheelspeed_noise_std(0.05), wheelspeed_error_probability(0.0), wheelspeed_scaling_factor(1.0),
+        imu_enabled(true), imu_update_rate(10.0), accel_noise_std(0.05),gyro_noise_std(0.05), gyro_bias(0.0), imu_error_probability(0.0),
         car_initial_x(0.0),car_initial_y(0.0),car_initial_psi(0.0),car_initial_velocity(5.0)
     {}
 };
@@ -73,6 +79,20 @@ class Simulation
 
         Simulation();
         void reset();
+
+        std::string getSavePath();
+
+        void save_plot(const std::string &filename);
+
+        void save_metrics();
+
+        void plot_trajectory(std::vector<Vector2> m_vehicle_position_history,
+                             std::vector<Vector2> m_filter_position_history);
+
+        void plot_error(std::vector<double> m_filter_error_position_history,
+                        std::vector<double> m_filter_error_heading_history,
+                        std::vector<double> m_filter_error_velocity_history);
+
         void reset(SimulationParams sim_params);
         void update();
         void render(Display& disp);

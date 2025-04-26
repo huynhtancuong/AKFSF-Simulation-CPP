@@ -42,6 +42,9 @@ class LidarSensor
         LidarSensor();
         void reset();
         void setLidarNoiseStd(double range_std, double theta_std);
+
+        void setLidarErrorProb(double prob);
+
         void setLidarMaxRange(double range);
         void setLidarDAEnabled(bool id_enabled);
         std::vector<LidarMeasurement> generateLidarMeasurements(double sensor_x, double sensor_y, double sensor_yaw, const BeaconMap& map);
@@ -53,6 +56,7 @@ class LidarSensor
         double m_theta_noise_std;
         double m_max_range;
         bool m_id_enabled;
+        double m_error_prob;
 };
 
 class IMUSensor
@@ -63,6 +67,9 @@ class IMUSensor
         void reset();
         void setAccelNoiseStd(double std);
         void setGyroNoiseStd(double std);
+
+        void setErrorProb(double prob);
+
         IMUMeasurement generateIMUMeasurement(double sensor_accel, double sensor_yaw_rate);
 
         void setGyroBias(double gyro_bias);
@@ -71,6 +78,7 @@ class IMUSensor
 
         std::mt19937 m_rand_gen;
         double m_accel_noise_std, m_gyro_noise_std, m_gyro_bias;
+        double m_error_prob;
 };
 
 class WheelsSpeedSensor
@@ -79,6 +87,11 @@ class WheelsSpeedSensor
 
         WheelsSpeedSensor();
         void reset();
+
+        void setErrorProb(double prob);
+
+        void setScalingFactor(double factor);
+
         void setOdometerNoiseStd(double std);
         WheelsSpeedMeasurement generateWheelsSpeedMeasurement(double sensor_left_wheel_vel, double sensor_right_wheel_vel, double base_wheel_distance);
 
@@ -86,6 +99,8 @@ class WheelsSpeedSensor
 
         std::mt19937 m_rand_gen;
         double m_noise_std;
+        double m_error_prob;
+        double m_scaling_factor;
 };
 
 class CompassSensor
@@ -94,6 +109,11 @@ class CompassSensor
 
         CompassSensor();
         void reset();
+
+        void setBias(double bias);
+
+        void setErrorProb(double prob);
+
         void setCompassNoiseStd(double std);
         CompassMeasurement generateCompassMeasurement(double sensor_heading);
 
@@ -101,6 +121,8 @@ class CompassSensor
 
         std::mt19937 m_rand_gen;
         double m_noise_std;
+        double m_error_prob;
+        double m_bias;
 };
 
 #endif  // INCLUDE_AKFSFSIM_SENSORS_H

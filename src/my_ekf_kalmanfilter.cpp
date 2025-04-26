@@ -11,9 +11,9 @@
 
 // -------------------------------------------------- //
 // YOU CAN USE AND MODIFY THESE CONSTANTS HERE
-constexpr double ACCEL_STD = 0.001;
-constexpr double GYRO_STD = 0.001;
-constexpr double WHEEL_SPEED_STD = 0.5;
+constexpr double ACCEL_STD = 0.05;
+constexpr double GYRO_STD = 0.05;
+constexpr double WHEEL_SPEED_STD = 0.05;
 constexpr double COMPASS_STD = 0.1;
 constexpr double GPS_POS_STD = 3.0;
 constexpr double LIDAR_RANGE_STD = 3.0;
@@ -24,7 +24,7 @@ constexpr double INIT_THETA_STD = 90.0/180.0 * M_PI;
 constexpr double INIT_OMEGA_STD = 1.0/180.0 *M_PI;
 constexpr double INIT_POS_STD = 10.0;
 
-constexpr double PROCESS_NOISE_POS_STD = 0.0;
+constexpr double PROCESS_NOISE_POS_STD = 0.01;
 constexpr double PROCESS_NOISE_VEL_STD = 0.01;
 constexpr double PROCESS_NOISE_THETA_STD = 0.01;
 constexpr double PROCESS_NOISE_OMEGA_STD = 0.01;
