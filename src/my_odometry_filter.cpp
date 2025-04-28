@@ -38,7 +38,7 @@ void OdometryFilter::handleGPSMeasurement(GPSMeasurement meas)
         VectorXd state = Vector4d::Zero();
         MatrixXd cov = Matrix4d::Zero();
 
-        state << meas.x, meas.y, 0, 0;
+        state << 0, 0, 0, 0;
 
         setState(state);
         setCovariance(cov);
@@ -48,6 +48,19 @@ void OdometryFilter::handleGPSMeasurement(GPSMeasurement meas)
 
 
 void OdometryFilter::handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) {
+    if (!isInitialised())
+    {
+        // State : [X, Y, theta, V]
+        VectorXd state = Vector4d::Zero();
+        MatrixXd cov = Matrix4d::Zero();
+
+        state << 0, 0, 0, 0;
+
+        setState(state);
+        setCovariance(cov);
+        // ----------------------------------------------------------------------- //
+    }
+
     if (isInitialised())
     {
         VectorXd state = getState();
@@ -78,18 +91,18 @@ void OdometryFilter::handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas) {
 void OdometryFilter::handleCompassMeasurement(CompassMeasurement meas)
 {
 
-    if (isInitialised())
-    {
-
-        VectorXd state = getState();
-
-        double theta = meas.theta;
-
-        state(2) = wrapAngle(theta);
-
-        setState(state);
-
-    }
+    // if (isInitialised())
+    // {
+    //
+    //     VectorXd state = getState();
+    //
+    //     double theta = meas.theta;
+    //
+    //     state(2) = wrapAngle(theta);
+    //
+    //     setState(state);
+    //
+    // }
 }
 
 Matrix2d OdometryFilter::getVehicleStatePositionCovariance()

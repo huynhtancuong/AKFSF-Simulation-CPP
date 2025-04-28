@@ -94,7 +94,7 @@ std::vector<double> generateSigmaWeights(unsigned int numStates)
     const double w0 = kappa / (numStates + kappa);
     const double wi = 0.5 / (numStates + kappa);
     weights.push_back(w0);
-    for (size_t i = 0; i< 2*numStates; i++) {
+    for (size_t i = 0; i< 2*numStates; ++i) {
         weights.push_back(wi);
     }
 
@@ -142,19 +142,20 @@ VectorXd vehicleProcessModel(VectorXd aug_state, double input_omega, double inpu
     double py = aug_state(1);
     double theta = aug_state(2);
     double V = aug_state(3);
+    double omega = aug_state(4);
 
-    double Wpx = aug_state(5);
-    double Wpy = aug_state(6);
-    double Wtheta = aug_state(7);
-    double Wv = aug_state(8);
-    double Womega = aug_state(9);
-    double Waccel = aug_state(10);
+    double px_noise = aug_state(5);
+    double py_noise = aug_state(6);
+    double theta_noise = aug_state(7);
+    double V_noise = aug_state(8);
+    double omega_noise = aug_state(9);
+    double accel_noise = aug_state(10);
 
-    double new_px = px + V * dt * cos(theta) + Wpx;
-    double new_py = py + V * dt * sin(theta) + Wpy;
-    double new_theta = wrapAngle(theta + input_omega * dt + Wtheta);
-    double new_V = V + dt * (input_accel + Waccel) + Wv;
-    double new_omega = input_omega + Womega;
+    double new_px = px + V * dt * cos(theta) + px_noise;
+    double new_py = py + V * dt * sin(theta) + py_noise;
+    double new_theta = theta + input_omega * dt + theta_noise;
+    double new_V = V + dt * (input_accel + accel_noise) + V_noise;
+    double new_omega = omega + input_omega + omega_noise;
 
     new_state << new_px, new_py, new_theta, new_V, new_omega;
 
@@ -209,7 +210,7 @@ void KalmanFilterUKF::predictionStep(IMUMeasurement meas, double dt)
         for (size_t i = 0; i < sigmaPoints.size(); i++) {
             state += weights.at(i) * sigma_points_predict.at(i);
         }
-        state(2) = wrapAngle(state(2)); // Wrap the angle to be within -pi to pi
+        state = normaliseState(state);
 
         // Calculate the covariance matrix
         cov.setZero();
@@ -311,7 +312,7 @@ void KalmanFilterUKF::handleLidarMeasurement(LidarMeasurement meas, const Beacon
             state = state + K * y;
             cov = cov - K * S * K.transpose();
 
-            state(2) = wrapAngle(state(2)); // Wrap the angle to be within -pi to pi
+            state = normaliseState(state); // Wrap the angle to be within -pi to pi
 
         }
         // ----------------------------------------------------------------------- //
@@ -355,6 +356,7 @@ void KalmanFilterUKF::handleGPSMeasurement(GPSMeasurement meas)
         MatrixXd I = MatrixXd::Identity(cov.rows(), cov.cols());
         cov = (I - K*H) * cov * (I - K*H).transpose() + K*R*K.transpose();
 
+        state = normaliseState(state); // Wrap the angle to be within -pi to pi
 
         setState(state);
         setCovariance(cov);
@@ -415,7 +417,7 @@ void KalmanFilterUKF::handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas)
         state = state + K * y;
         cov = (I - K * H) * cov;
 
-        state(2) = wrapAngle(state(2)); // Wrap the angle to be within -pi to pi
+        state = normaliseState(state); // Wrap the angle to be within -pi to pi
 
         setState(state);
         setCovariance(cov);
@@ -458,7 +460,7 @@ void KalmanFilterUKF::handleCompassMeasurement(CompassMeasurement meas)
         cov = (I - K * H) * cov * (I - K * H).transpose() + K * R * K.transpose();
 
         // Wrap the angle to be within -pi to pi
-        state(2) = wrapAngle(state(2));
+        state = normaliseState(state);
 
         setState(state);
         setCovariance(cov);
