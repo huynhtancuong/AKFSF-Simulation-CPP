@@ -7,6 +7,9 @@
 #include "simulation.h"
 #include "car.h"
 #include "display.h"
+#include <cmath>
+#include <filesystem>
+#include <matplot/matplot.h>
 
 // Screen dimension constants
 const int SCREEN_WIDTH = 1024;
@@ -25,6 +28,87 @@ SimulationParams loadSimulation7Parameters();
 SimulationParams loadSimulation8Parameters();
 SimulationParams loadSimulation9Parameters();
 SimulationParams loadSimulation0Parameters();
+
+struct FilterSimulationData {
+    std::string filter_name;
+    std::vector<Vector2> vehicle_path;
+    std::vector<Vector2> filter_path;
+    double position_rmse;
+    double heading_rmse;
+    std::vector<double> position_error;
+    std::vector<double> heading_error;
+};
+
+void saveProfileSimData(std::vector <FilterSimulationData> filter_simulation_data, std::string profile_name)
+{
+    using namespace matplot;
+    std::string path = "/home/huynh/repos/kalman-filter-course-udemy/simulation/images/"
+                        + profile_name + "/";
+    path.replace(path.find(" - "), 3, "_");
+    std::replace(path.begin(), path.end(), ' ', '_');
+
+    // Save trajectory plot
+    std::string trajectory_path = path + "trajectory.png";
+    std::vector<double> true_x, true_y;
+    for (const auto& pos : filter_simulation_data[0].vehicle_path)
+    {
+        true_x.push_back(pos.x);
+        true_y.push_back(pos.y);
+    }
+    auto fig = figure(true);
+    fig->size(800, 800);
+    plot(true_x, true_y)->color("green").line_width(1).display_name("Ground Truth");
+    hold(on);
+    for (const auto& filter_data : filter_simulation_data)
+    {
+        std::vector<double> filter_x, filter_y;
+        for (const auto& pos : filter_data.filter_path)
+        {
+            filter_x.push_back(pos.x);
+            filter_y.push_back(pos.y);
+        }
+        plot(filter_x, filter_y)->line_width(1).display_name(filter_data.filter_name);
+    }
+    grid(on);
+    xlabel("x (m)");
+    ylabel("y (m)");
+    legend();
+    title("Vehicle Trajectory");
+    save(trajectory_path);
+
+    // Save position error plot
+    std::vector<double> time;
+    for (unsigned i = 0; i < filter_simulation_data[0].position_error.size(); ++i)
+    {
+        time.push_back(i/10.0);
+    }
+    auto fig2 = figure(true);
+    hold(on);
+    for (const auto& filter_data : filter_simulation_data)
+    {
+        plot(time, filter_data.position_error)->line_width(1).display_name(filter_data.filter_name);
+    }
+    grid(on);
+    xlabel("Time (s)");
+    ylabel("Meters");
+    title("Position Error");
+    legend();
+    save(path + "position_error.png");
+
+    // Save heading error plot
+    auto fig3 = figure(true);
+    hold(on);
+    for (const auto& filter_data : filter_simulation_data)
+    {
+        plot(time, filter_data.heading_error)->line_width(1).display_name(filter_data.filter_name);
+    }
+    grid(on);
+    xlabel("Time (s)");
+    ylabel("Radians");
+    title("Heading Error");
+    legend();
+    save(path + "heading_error.png");
+}
 
 // Main Loop
 int main( int argc, char* args[] )
@@ -49,65 +133,103 @@ int main( int argc, char* args[] )
 
     // Main Simulation Loop
     mSimulation.reset(loadSimulation1Parameters());
-    //mSimulation.setTimeMultiplier(10);
+
+    mSimulation.setTimeMultiplier(50);
+
     bool mRunning = true;
-    while(mRunning)
+
+
+    std::vector<SimulationParams> sim_params;
+    sim_params.push_back(loadSimulation1Parameters());
+    sim_params.push_back(loadSimulation2Parameters());
+    sim_params.push_back(loadSimulation3Parameters());
+    sim_params.push_back(loadSimulation4Parameters());
+    sim_params.push_back(loadSimulation5Parameters());
+    sim_params.push_back(loadSimulation6Parameters());
+
+    std::vector<FilterSimulationData> filter_simulation_data(4);
+
+    // Automatic switch sim profile and filter
+    for (const auto& sim_param : sim_params)
     {
-        // Update Simulation
-        mSimulation.update();
-
-        // Update Display
-        mDisplay.clearScreen();
-
-            // Draw Background Grid
-            mDisplay.setDrawColour(101,101,101);
-            for (int x = -GRID_SIZE; x <= GRID_SIZE; x+=GRID_SPACEING){mDisplay.drawLine(Vector2(x,-GRID_SIZE),Vector2(x,GRID_SIZE));}
-            for (int y = -GRID_SIZE; y <= GRID_SIZE; y+=GRID_SPACEING){mDisplay.drawLine(Vector2(-GRID_SIZE,y),Vector2(GRID_SIZE,y));}
-
-            // Draw Simulation
-            mSimulation.render(mDisplay);
-
-        mDisplay.showScreen();
-
-        // Handle Events
-        SDL_Event event;
-        while( SDL_PollEvent( &event ) != 0 )
+        for (int filter_type = 0; filter_type < 4; ++filter_type)
         {
-            if( event.type == SDL_QUIT ){mRunning = false;}
-            else if (event.type == SDL_KEYDOWN)
+            mSimulation.reset(sim_param);
+            mSimulation.selectFilter(filter_type);
+            std::cout << "Simulation: Running Simulation " << sim_param.profile_name << " with Filter " << filter_type << std::endl;
+
+            // Update Simulation
+            while (mSimulation.isRunning() && mRunning)
             {
-                switch( event.key.keysym.sym )
-                {               
-                    case SDLK_SPACE: mSimulation.togglePauseSimulation(); break;
-                    case SDLK_ESCAPE:mRunning = false; break;
-                    case SDLK_PAGEUP: mSimulation.increaseZoom(); break;
-                    case SDLK_PAGEDOWN: mSimulation.decreaseZoom(); break;
-                    case SDLK_RIGHTBRACKET: mSimulation.increaseTimeMultiplier(); break;
-                    case SDLK_LEFTBRACKET: mSimulation.decreaseTimeMultiplier(); break;
-                    case SDLK_r: mSimulation.reset(); break;
-                    case SDLK_1: mSimulation.reset(loadSimulation1Parameters()); break;
-                    case SDLK_2: mSimulation.reset(loadSimulation2Parameters()); break;
-                    case SDLK_3: mSimulation.reset(loadSimulation3Parameters()); break;
-                    case SDLK_4: mSimulation.reset(loadSimulation4Parameters()); break;
-                    case SDLK_5: mSimulation.reset(loadSimulation5Parameters()); break;
-                    case SDLK_6: mSimulation.reset(loadSimulation6Parameters()); break;
-                    case SDLK_7: mSimulation.reset(loadSimulation7Parameters()); break;
-                    case SDLK_8: mSimulation.reset(loadSimulation8Parameters()); break;
-                    case SDLK_9: mSimulation.reset(loadSimulation9Parameters()); break;
-                    case SDLK_0: mSimulation.reset(loadSimulation0Parameters()); break;
-                    case SDLK_l: mSimulation.selectFilter(0); break;
-                    case SDLK_e: mSimulation.selectFilter(1); break;
-                    case SDLK_u: mSimulation.selectFilter(2); break;
-                    case SDLK_o: mSimulation.selectFilter(3); break;
-                    case SDLK_c: mSimulation.toggleSensorCompass(); break;
-                    case SDLK_i: mSimulation.toggleSensorIMU(); break;
-                    case SDLK_g: mSimulation.toggleSensorGPS(); break;
-                    case SDLK_d: mSimulation.toggleSensorLidar(); break;
-                    case SDLK_w: mSimulation.toggleSensorWheelEncoder(); break;
+                mSimulation.update();
+
+                // Update Display
+                mDisplay.clearScreen();
+
+                // Draw Background Grid
+                mDisplay.setDrawColour(101,101,101);
+                for (int x = -GRID_SIZE; x <= GRID_SIZE; x+=GRID_SPACEING){mDisplay.drawLine(Vector2(x,-GRID_SIZE),Vector2(x,GRID_SIZE));}
+                for (int y = -GRID_SIZE; y <= GRID_SIZE; y+=GRID_SPACEING){mDisplay.drawLine(Vector2(-GRID_SIZE,y),Vector2(GRID_SIZE,y));}
+
+                // Draw Simulation
+                mSimulation.render(mDisplay);
+
+                mDisplay.showScreen();
+
+                // Handle Events
+                SDL_Event event;
+                while( SDL_PollEvent( &event ) != 0 )
+                {
+                    if( event.type == SDL_QUIT ){mRunning = false;}
+                    else if (event.type == SDL_KEYDOWN)
+                    {
+                        switch( event.key.keysym.sym )
+                        {
+                            case SDLK_SPACE: mSimulation.togglePauseSimulation(); break;
+                            case SDLK_ESCAPE:mRunning = false; break;
+                            case SDLK_PAGEUP: mSimulation.increaseZoom(); break;
+                            case SDLK_PAGEDOWN: mSimulation.decreaseZoom(); break;
+                            case SDLK_RIGHTBRACKET: mSimulation.increaseTimeMultiplier(); break;
+                            case SDLK_LEFTBRACKET: mSimulation.decreaseTimeMultiplier(); break;
+                            case SDLK_r: mSimulation.reset(); break;
+                            case SDLK_1: mSimulation.reset(loadSimulation1Parameters()); break;
+                            case SDLK_2: mSimulation.reset(loadSimulation2Parameters()); break;
+                            case SDLK_3: mSimulation.reset(loadSimulation3Parameters()); break;
+                            case SDLK_4: mSimulation.reset(loadSimulation4Parameters()); break;
+                            case SDLK_5: mSimulation.reset(loadSimulation5Parameters()); break;
+                            case SDLK_6: mSimulation.reset(loadSimulation6Parameters()); break;
+                            case SDLK_7: mSimulation.reset(loadSimulation7Parameters()); break;
+                            case SDLK_8: mSimulation.reset(loadSimulation8Parameters()); break;
+                            case SDLK_9: mSimulation.reset(loadSimulation9Parameters()); break;
+                            case SDLK_0: mSimulation.reset(loadSimulation0Parameters()); break;
+                            case SDLK_l: mSimulation.selectFilter(0); break;
+                            case SDLK_e: mSimulation.selectFilter(1); break;
+                            case SDLK_u: mSimulation.selectFilter(2); break;
+                            case SDLK_o: mSimulation.selectFilter(3); break;
+                            case SDLK_c: mSimulation.toggleSensorCompass(); break;
+                            case SDLK_i: mSimulation.toggleSensorIMU(); break;
+                            case SDLK_g: mSimulation.toggleSensorGPS(); break;
+                            case SDLK_d: mSimulation.toggleSensorLidar(); break;
+                            case SDLK_w: mSimulation.toggleSensorWheelEncoder(); break;
+                        }
+                    }
                 }
             }
+
+            // Save Simulation Data of the current filter
+            filter_simulation_data[filter_type].filter_name = mSimulation.m_selected_filter->getName();
+            filter_simulation_data[filter_type].vehicle_path = mSimulation.m_vehicle_position_history;
+            filter_simulation_data[filter_type].filter_path = mSimulation.m_filter_position_history;
+            filter_simulation_data[filter_type].position_error = mSimulation.m_filter_error_position_history;
+            filter_simulation_data[filter_type].heading_error = mSimulation.m_filter_error_heading_history;
         }
+        // Save plots
+        saveProfileSimData(filter_simulation_data, sim_param.profile_name);
     }
+
+
+
+
 
     // Destroy Renderer
     mDisplay.destroyRenderer();
@@ -124,6 +246,7 @@ SimulationParams loadSimulation1Parameters()
     SimulationParams sim_params;
     sim_params.profile_name = "1 - Ideal Conditions";
     sim_params.car_initial_velocity = 5;
+    sim_params.car_initial_psi = 0;
 
     sim_params.accel_noise_std = 0.0;
     sim_params.gyro_noise_std = 0.0;
@@ -133,8 +256,7 @@ SimulationParams loadSimulation1Parameters()
     sim_params.lidar_theta_noise_std = 0.0;
     sim_params.wheelspeed_noise_std = 0.0;
 
-    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
-    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(500,500,5));
+    sim_params.car_commands.emplace_back(new MotionCommandMoveTo(500,500,2));
     return sim_params;
 }
 
@@ -143,7 +265,7 @@ SimulationParams loadSimulation2Parameters()
     SimulationParams sim_params;
     sim_params.profile_name = "2 - White Noise";
     sim_params.car_initial_velocity = 5;
-    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
+    sim_params.car_initial_psi = 0;
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,0,4));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,4));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,4));
@@ -163,7 +285,7 @@ SimulationParams loadSimulation3Parameters()
     sim_params.lidar_error_probability = 0.1;
 
     sim_params.car_initial_velocity = 5;
-    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
+    sim_params.car_initial_psi = 0;
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,0,4));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,4));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,4));
@@ -181,7 +303,7 @@ SimulationParams loadSimulation4Parameters()
     sim_params.compass_bias = 0.05;
 
     sim_params.car_initial_velocity = 5;
-    sim_params.car_initial_psi = M_PI/180.0 * 45.0;
+    sim_params.car_initial_psi = 0;
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,0,4));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(100,100,4));
     sim_params.car_commands.emplace_back(new MotionCommandMoveTo(0,100,4));

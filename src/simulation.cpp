@@ -173,7 +173,7 @@ void Simulation::plot_trajectory(std::vector<Vector2> m_vehicle_position_history
     // show();
 }
 
-void Simulation::plot_error(std::vector<double> m_filter_error_position_history, std::vector<double> m_filter_error_heading_history, std::vector<double> m_filter_error_velocity_history)
+void Simulation::plot_error(std::vector<double> m_filter_error_position_history, std::vector<double> m_filter_error_heading_history)
 {
     using namespace matplot;
 
@@ -222,19 +222,20 @@ void Simulation::update()
 {
     if (m_is_running && !m_is_paused)
     {
-        // Start timing this iteration
-        m_step_start_time = std::chrono::high_resolution_clock::now();
-        
         // Time Multiplier
+
         for (unsigned i = 0; i < m_time_multiplier; ++i)
         {
+            // Start timing this iteration
+            m_step_start_time = std::chrono::high_resolution_clock::now();
+
             // Check for End Time
             if(m_time >= m_sim_parameters.end_time)
             {
                 m_is_running = false;
                 std::cout << "Simulation: Reached End of Simulation Time (" << m_time << ")" << std::endl;
                 plot_trajectory(m_vehicle_position_history, m_filter_position_history);
-                plot_error(m_filter_error_position_history, m_filter_error_heading_history, m_filter_error_velocity_history);
+                plot_error(m_filter_error_position_history, m_filter_error_heading_history);
                 save_metrics();
                 return;
             }
@@ -332,22 +333,22 @@ void Simulation::update()
 
             // Update Time
             m_time += m_sim_parameters.time_step;
+
+            // Calculate CPU time for this iteration
+                auto end_time = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double, std::milli> elapsed = end_time - m_step_start_time;
+
+                // Store CPU time in milliseconds
+                m_cpu_times.push_back(elapsed.count());
+
+                // Limit history to last 100 values to avoid excessive memory usage
+                if (m_cpu_times.size() > 100)
+                    m_cpu_times.erase(m_cpu_times.begin());
+
+                // Calculate average CPU time
+                if (!m_cpu_times.empty())
+                    m_cpu_time_avg = std::accumulate(m_cpu_times.begin(), m_cpu_times.end(), 0.0) / m_cpu_times.size();
         }
-                    
-        // Calculate CPU time for this iteration
-        auto end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> elapsed = end_time - m_step_start_time;
-
-        // Store CPU time in milliseconds
-        m_cpu_times.push_back(elapsed.count());
-
-        // Limit history to last 100 values to avoid excessive memory usage
-        if (m_cpu_times.size() > 100)
-            m_cpu_times.erase(m_cpu_times.begin());
-
-        // Calculate average CPU time
-        if (!m_cpu_times.empty())
-            m_cpu_time_avg = std::accumulate(m_cpu_times.begin(), m_cpu_times.end(), 0.0) / m_cpu_times.size();
     }
 }
         

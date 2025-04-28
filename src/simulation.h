@@ -90,8 +90,7 @@ class Simulation
                              std::vector<Vector2> m_filter_position_history);
 
         void plot_error(std::vector<double> m_filter_error_position_history,
-                        std::vector<double> m_filter_error_heading_history,
-                        std::vector<double> m_filter_error_velocity_history);
+                        std::vector<double> m_filter_error_heading_history);
 
         void reset(SimulationParams sim_params);
         void update();
@@ -111,7 +110,7 @@ class Simulation
         void toggleSensorWheelEncoder() {m_sim_parameters.wheelspeed_enabled = !m_sim_parameters.wheelspeed_enabled;}
         void toggleSensorIMU() {m_sim_parameters.imu_enabled = !m_sim_parameters.imu_enabled;}
 
-    private:
+    // private:
 
         SimulationParams m_sim_parameters;
         KalmanFilterBase *m_selected_filter;
