@@ -117,9 +117,9 @@ VehicleState OdometryFilter::getVehicleState()
 {
     if (isInitialised())
     {
-        VectorXd state = getState(); // STATE VECTOR [X,Y,VX,VY]
-        double psi = std::atan2(state[3],state[2]);
-        double V = std::sqrt(state[2]*state[2] + state[3]*state[3]);
+        VectorXd state = getState(); // STATE VECTOR [X,Y,theta,V]
+        double psi = state[2];
+        double V = state[3];
         return VehicleState(state[0],state[1],psi,V);
     }
     return VehicleState();

@@ -165,7 +165,7 @@ int main( int argc, char* args[] )
     // Main Simulation Loop
     // mSimulation.reset(loadSimulation1Parameters());
 
-    mSimulation.setTimeMultiplier(50);
+    mSimulation.setTimeMultiplier(100);
 
     bool mRunning = true;
 
