@@ -113,7 +113,7 @@ public:
         double elapsed_time = time - m_start_time;
 
         // Calculate the phase within the figure-8 motion (0 to 2π)
-        double phase = 2.0 * M_PI * elapsed_time / m_command_time;
+        double phase = 2.2 * M_PI * elapsed_time / m_command_time;
 
         double px = m_radius * sin(phase);
         double py = m_radius * sin(2.0 * phase);

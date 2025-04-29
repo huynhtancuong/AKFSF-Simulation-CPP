@@ -11,12 +11,9 @@
 #include "beacons.h"
 #include "sensors.h"
 
-
-struct SimulationParams
+struct SensorsProfile
 {
-    std::string profile_name;
-    double time_step;
-    double end_time;
+    double duration;
 
     bool gps_enabled;
     double gps_update_rate;
@@ -53,21 +50,36 @@ struct SimulationParams
     double wheelspeed_scaling_factor;
 
 
+    SensorsProfile() :
+        duration(0.0),
+        gps_enabled(true), gps_update_rate(1.0), gps_position_noise_std(3), gps_error_probability(0.0),gps_denied_x(0.0),gps_denied_y(0.0),gps_denied_range(-1.0),
+        lidar_enabled(true), lidar_id_enabled(true), lidar_update_rate(10.0),lidar_range_noise_std(3),lidar_theta_noise_std(0.02), lidar_error_probability(0.0),
+        compass_enabled(true), compass_update_rate(5.0), compass_noise_std(0.05), compass_error_probability(0.0), compass_bias(0.0),
+        wheelspeed_enabled(true), wheelspeed_update_rate(10.0), wheelspeed_noise_std(0.1), wheelspeed_error_probability(0.0), wheelspeed_scaling_factor(1.0),
+        imu_enabled(true), imu_update_rate(10.0), accel_noise_std(0.05),gyro_noise_std(0.05), gyro_bias(0.0), imu_error_probability(0.0)
+        {}
+};
+
+
+struct SimulationParams
+{
+    std::string profile_name;
+    double time_step;
+    double end_time;
+
+    SensorsProfile cur_sensors_profile;
+    
     double car_initial_x;
     double car_initial_y;
     double car_initial_psi;
     double car_initial_velocity;
 
     std::vector<std::shared_ptr<MotionCommandBase>> car_commands;
+    std::queue<SensorsProfile> list_sensors_profile, list_sensors_profile_temp;
 
     SimulationParams():
         profile_name(""),
         time_step(0.1),end_time(120),
-        gps_enabled(true), gps_update_rate(1.0), gps_position_noise_std(3), gps_error_probability(0.0),gps_denied_x(0.0),gps_denied_y(0.0),gps_denied_range(-1.0),
-        lidar_enabled(true), lidar_id_enabled(true), lidar_update_rate(10.0),lidar_range_noise_std(3),lidar_theta_noise_std(0.02), lidar_error_probability(0.0),
-        compass_enabled(true), compass_update_rate(5.0), compass_noise_std(0.1), compass_error_probability(0.0), compass_bias(0.0),
-        wheelspeed_enabled(true), wheelspeed_update_rate(10.0), wheelspeed_noise_std(0.05), wheelspeed_error_probability(0.0), wheelspeed_scaling_factor(1.0),
-        imu_enabled(true), imu_update_rate(10.0), accel_noise_std(0.05),gyro_noise_std(0.05), gyro_bias(0.0), imu_error_probability(0.0),
         car_initial_x(0.0),car_initial_y(0.0),car_initial_psi(0.0),car_initial_velocity(5.0)
     {}
 };
@@ -92,6 +104,8 @@ class Simulation
         void plot_error(std::vector<double> m_filter_error_position_history,
                         std::vector<double> m_filter_error_heading_history);
 
+        void update_sensor_profile(SensorsProfile profile);
+
         void reset(SimulationParams sim_params);
         void update();
         void render(Display& disp);
@@ -104,11 +118,11 @@ class Simulation
         bool isPaused();
         bool isRunning();
         void selectFilter(unsigned int index);
-        void toggleSensorGPS() {m_sim_parameters.gps_enabled = !m_sim_parameters.gps_enabled;}
-        void toggleSensorLidar() {m_sim_parameters.lidar_enabled = !m_sim_parameters.lidar_enabled;}
-        void toggleSensorCompass() {m_sim_parameters.compass_enabled = !m_sim_parameters.compass_enabled;}
-        void toggleSensorWheelEncoder() {m_sim_parameters.wheelspeed_enabled = !m_sim_parameters.wheelspeed_enabled;}
-        void toggleSensorIMU() {m_sim_parameters.imu_enabled = !m_sim_parameters.imu_enabled;}
+        void toggleSensorGPS() {m_sim_parameters.cur_sensors_profile.gps_enabled = !m_sim_parameters.cur_sensors_profile.gps_enabled;}
+        void toggleSensorLidar() {m_sim_parameters.cur_sensors_profile.lidar_enabled = !m_sim_parameters.cur_sensors_profile.lidar_enabled;}
+        void toggleSensorCompass() {m_sim_parameters.cur_sensors_profile.compass_enabled = !m_sim_parameters.cur_sensors_profile.compass_enabled;}
+        void toggleSensorWheelEncoder() {m_sim_parameters.cur_sensors_profile.wheelspeed_enabled = !m_sim_parameters.cur_sensors_profile.wheelspeed_enabled;}
+        void toggleSensorIMU() {m_sim_parameters.cur_sensors_profile.imu_enabled = !m_sim_parameters.cur_sensors_profile.imu_enabled;}
 
     // private:
 
@@ -132,6 +146,7 @@ class Simulation
         double m_view_size;
 
         double m_time;
+        double m_time_till_sensor_profile_change;
         double m_time_till_gyro_measurement;
         double m_time_till_gps_measurement;
         double m_time_till_lidar_measurement;
@@ -143,6 +158,8 @@ class Simulation
         std::chrono::high_resolution_clock::time_point m_step_start_time;
         std::vector<double> m_cpu_times;
         double m_cpu_time_avg;
+
+        double m_max_position_error;
 
         std::vector<GPSMeasurement> m_gps_measurement_history;
         std::vector<LidarMeasurement> m_lidar_measurement_history;

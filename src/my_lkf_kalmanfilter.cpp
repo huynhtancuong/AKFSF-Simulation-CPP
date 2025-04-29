@@ -11,11 +11,16 @@
 
 // -------------------------------------------------- //
 // YOU CAN USE AND MODIFY THESE CONSTANTS HERE
-constexpr bool INIT_ON_FIRST_PREDICTION = false;
 constexpr double INIT_POS_STD = 1.0;
 constexpr double INIT_VEL_STD = 1.0;
-constexpr double ACCEL_STD = 0.5;
+constexpr double ACCEL_STD = 1.0;
 constexpr double GPS_POS_STD = 3.0;
+
+
+constexpr double NIS_THRESHOLD = 50.0; // Normalised Innovation Squared threshold
+
+constexpr bool INIT_ON_FIRST_PREDICTION = false;
+constexpr bool REJECT_FAULTY_MEASUREMENTS = false;
 // -------------------------------------------------- //
 
 void KalmanFilterLKF::predictionStep(double dt)
@@ -111,12 +116,19 @@ void KalmanFilterLKF::handleGPSMeasurement(GPSMeasurement meas)
         H <<    1,0,0,0,
                 0,1,0,0;
 
-        VectorXd y_tile = Vector2d(meas.x, meas.y) - H * state;
+        VectorXd y = Vector2d(meas.x, meas.y) - H * state;
         MatrixXd S = H*cov*H.transpose() + R;
         MatrixXd K = cov*H.transpose()*S.inverse();
 
-        state = state + K*y_tile;
+        state = state + K*y;
         cov = (Matrix4d::Identity() - K*H) * cov;
+
+        /* Faulty measurement test */
+        double NIS = y.transpose()*S.inverse()*y;
+        if (NIS >= NIS_THRESHOLD && REJECT_FAULTY_MEASUREMENTS) {
+            std::cerr << "GPS NIS Failed: " << NIS << std::endl;
+            return; // Skip the update step if the measurement is faulty
+        }
 
         // ----------------------------------------------------------------------- //
 

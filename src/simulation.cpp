@@ -17,6 +17,7 @@ Simulation::Simulation():
     m_time_multiplier(5),
     m_view_size(100),
     m_time(0.0),
+    m_time_till_sensor_profile_change(0.0),
     m_time_till_gyro_measurement(0.0),
     m_time_till_gps_measurement(0.0),
     m_time_till_lidar_measurement(0.0),
@@ -28,16 +29,21 @@ void Simulation::reset()
 {
     // Reset Simulation
     m_time = 0.0;
+    m_time_till_sensor_profile_change = 0.0;
     m_time_till_gyro_measurement = 0.0;
     m_time_till_gps_measurement = 0.0;
     m_time_till_lidar_measurement= 0.0;
 
     m_is_running = true;
     m_is_paused = false;
+
+    // Reset Simulation Parameters
+    m_sim_parameters.list_sensors_profile_temp = m_sim_parameters.list_sensors_profile;
     
     // Reset CPU time tracking variables
     m_cpu_times.clear();
     m_cpu_time_avg = 0.0;
+    m_max_position_error = 0.0;
     
     m_kalman_filter_lkf.reset();
     m_kalman_filter_ekf.reset();
@@ -45,30 +51,30 @@ void Simulation::reset()
     m_odometry_filter.reset();
 
     m_gps_sensor.reset();
-    m_gps_sensor.setGPSNoiseStd(m_sim_parameters.gps_position_noise_std);
-    m_gps_sensor.setGPSErrorProb(m_sim_parameters.gps_error_probability);
-    m_gps_sensor.setGPSDeniedZone(m_sim_parameters.gps_denied_x, m_sim_parameters.gps_denied_y, m_sim_parameters.gps_denied_range);
+    m_gps_sensor.setGPSNoiseStd(m_sim_parameters.cur_sensors_profile.gps_position_noise_std);
+    m_gps_sensor.setGPSErrorProb(m_sim_parameters.cur_sensors_profile.gps_error_probability);
+    m_gps_sensor.setGPSDeniedZone(m_sim_parameters.cur_sensors_profile.gps_denied_x, m_sim_parameters.cur_sensors_profile.gps_denied_y, m_sim_parameters.cur_sensors_profile.gps_denied_range);
 
     m_imu_sensor.reset();
-    m_imu_sensor.setErrorProb(m_sim_parameters.imu_error_probability);
-    m_imu_sensor.setGyroNoiseStd(m_sim_parameters.gyro_noise_std);
-    m_imu_sensor.setGyroBias(m_sim_parameters.gyro_bias);
-    m_imu_sensor.setAccelNoiseStd(m_sim_parameters.accel_noise_std);
+    m_imu_sensor.setErrorProb(m_sim_parameters.cur_sensors_profile.imu_error_probability);
+    m_imu_sensor.setGyroNoiseStd(m_sim_parameters.cur_sensors_profile.gyro_noise_std);
+    m_imu_sensor.setGyroBias(m_sim_parameters.cur_sensors_profile.gyro_bias);
+    m_imu_sensor.setAccelNoiseStd(m_sim_parameters.cur_sensors_profile.accel_noise_std);
 
     m_wheelspeed_sensor.reset();
-    m_wheelspeed_sensor.setErrorProb(m_sim_parameters.wheelspeed_error_probability);
-    m_wheelspeed_sensor.setOdometerNoiseStd(m_sim_parameters.wheelspeed_noise_std);
-    m_wheelspeed_sensor.setScalingFactor(m_sim_parameters.wheelspeed_scaling_factor);
+    m_wheelspeed_sensor.setErrorProb(m_sim_parameters.cur_sensors_profile.wheelspeed_error_probability);
+    m_wheelspeed_sensor.setOdometerNoiseStd(m_sim_parameters.cur_sensors_profile.wheelspeed_noise_std);
+    m_wheelspeed_sensor.setScalingFactor(m_sim_parameters.cur_sensors_profile.wheelspeed_scaling_factor);
 
     m_compass_sensor.reset();
-    m_compass_sensor.setErrorProb(m_sim_parameters.compass_error_probability);
-    m_compass_sensor.setCompassNoiseStd(m_sim_parameters.compass_noise_std);
-    m_compass_sensor.setBias(m_sim_parameters.compass_bias);
+    m_compass_sensor.setErrorProb(m_sim_parameters.cur_sensors_profile.compass_error_probability);
+    m_compass_sensor.setCompassNoiseStd(m_sim_parameters.cur_sensors_profile.compass_noise_std);
+    m_compass_sensor.setBias(m_sim_parameters.cur_sensors_profile.compass_bias);
 
     m_lidar_sensor.reset();
-    m_lidar_sensor.setLidarErrorProb(m_sim_parameters.lidar_error_probability);
-    m_lidar_sensor.setLidarNoiseStd(m_sim_parameters.lidar_range_noise_std, m_sim_parameters.lidar_theta_noise_std);
-    m_lidar_sensor.setLidarDAEnabled(m_sim_parameters.lidar_id_enabled);
+    m_lidar_sensor.setLidarErrorProb(m_sim_parameters.cur_sensors_profile.lidar_error_probability);
+    m_lidar_sensor.setLidarNoiseStd(m_sim_parameters.cur_sensors_profile.lidar_range_noise_std, m_sim_parameters.cur_sensors_profile.lidar_theta_noise_std);
+    m_lidar_sensor.setLidarDAEnabled(m_sim_parameters.cur_sensors_profile.lidar_id_enabled);
 
     m_car.reset(m_sim_parameters.car_initial_x, m_sim_parameters.car_initial_y,m_sim_parameters.car_initial_psi, m_sim_parameters.car_initial_velocity);
     
@@ -218,6 +224,30 @@ void Simulation::plot_error(std::vector<double> m_filter_error_position_history,
     // show();
 }
 
+void Simulation::update_sensor_profile(SensorsProfile profile)
+{
+    m_sim_parameters.cur_sensors_profile = profile;
+
+    // Update the sensors with the new profile
+    m_gps_sensor.setGPSNoiseStd(m_sim_parameters.cur_sensors_profile.gps_position_noise_std);
+    m_gps_sensor.setGPSErrorProb(m_sim_parameters.cur_sensors_profile.gps_error_probability);
+    m_gps_sensor.setGPSDeniedZone(m_sim_parameters.cur_sensors_profile.gps_denied_x, m_sim_parameters.cur_sensors_profile.gps_denied_y, m_sim_parameters.cur_sensors_profile.gps_denied_range);
+    m_imu_sensor.setErrorProb(m_sim_parameters.cur_sensors_profile.imu_error_probability);
+    m_imu_sensor.setGyroNoiseStd(m_sim_parameters.cur_sensors_profile.gyro_noise_std);
+    m_imu_sensor.setGyroBias(m_sim_parameters.cur_sensors_profile.gyro_bias);
+    m_imu_sensor.setAccelNoiseStd(m_sim_parameters.cur_sensors_profile.accel_noise_std);
+    m_wheelspeed_sensor.setErrorProb(m_sim_parameters.cur_sensors_profile.wheelspeed_error_probability);
+    m_wheelspeed_sensor.setOdometerNoiseStd(m_sim_parameters.cur_sensors_profile.wheelspeed_noise_std);
+    m_wheelspeed_sensor.setScalingFactor(m_sim_parameters.cur_sensors_profile.wheelspeed_scaling_factor);
+    m_compass_sensor.setErrorProb(m_sim_parameters.cur_sensors_profile.compass_error_probability);
+    m_compass_sensor.setCompassNoiseStd(m_sim_parameters.cur_sensors_profile.compass_noise_std);
+    m_compass_sensor.setBias(m_sim_parameters.cur_sensors_profile.compass_bias);
+    m_lidar_sensor.setLidarErrorProb(m_sim_parameters.cur_sensors_profile.lidar_error_probability);
+    m_lidar_sensor.setLidarNoiseStd(m_sim_parameters.cur_sensors_profile.lidar_range_noise_std, m_sim_parameters.cur_sensors_profile.lidar_theta_noise_std);
+    m_lidar_sensor.setLidarDAEnabled(m_sim_parameters.cur_sensors_profile.lidar_id_enabled);
+
+}
+
 void Simulation::update()
 {
     if (m_is_running && !m_is_paused)
@@ -240,18 +270,31 @@ void Simulation::update()
                 return;
             }
 
+            // Check for change of sensor config
+            if (m_time >= m_time_till_sensor_profile_change)
+            {
+                if (!m_sim_parameters.list_sensors_profile_temp.empty())
+                {
+                    update_sensor_profile(m_sim_parameters.list_sensors_profile_temp.front());
+                    m_sim_parameters.list_sensors_profile_temp.pop();
+                    m_time_till_sensor_profile_change += m_sim_parameters.cur_sensors_profile.duration;
+                    std::cout << "Simulation: Changed Sensor Profile at time " << m_time << std::endl;
+                }
+            }
+
+
             // Update Motion
             m_car.update(m_time, m_sim_parameters.time_step);
             m_vehicle_position_history.push_back(Vector2(m_car.getVehicleState().x,m_car.getVehicleState().y));
 
             // Update with IMU
-            if (m_sim_parameters.imu_enabled)
+            if (m_sim_parameters.cur_sensors_profile.imu_enabled)
             {
                 if (m_time_till_imu_measurement <= 0)
                 {
                     IMUMeasurement meas = m_imu_sensor.generateIMUMeasurement(m_car.getVehicleState().accel, m_car.getVehicleState().yaw_rate);
                     m_selected_filter->predictionStep(meas, m_sim_parameters.time_step);
-                    m_time_till_imu_measurement += 1.0/m_sim_parameters.imu_update_rate;
+                    m_time_till_imu_measurement += 1.0/m_sim_parameters.cur_sensors_profile.imu_update_rate;
                 }
                 m_time_till_imu_measurement -= m_sim_parameters.time_step;
             }
@@ -262,7 +305,7 @@ void Simulation::update()
 
 
             // Wheel Encoder Measurement
-            if (m_sim_parameters.wheelspeed_enabled)
+            if (m_sim_parameters.cur_sensors_profile.wheelspeed_enabled)
             {
                 if (m_time_till_wheelspeed_measurement <= 0)
                 {
@@ -270,45 +313,45 @@ void Simulation::update()
                                                                                                  m_car.getVehicleState().left_wheel_velocity,
                                                                                                  m_car.getVehicleState().base_wheel_distance);
                     m_selected_filter->handleWheelsSpeedMeasurement(meas);
-                    m_time_till_wheelspeed_measurement += 1.0/m_sim_parameters.wheelspeed_update_rate;
+                    m_time_till_wheelspeed_measurement += 1.0/m_sim_parameters.cur_sensors_profile.wheelspeed_update_rate;
                 }
                 m_time_till_wheelspeed_measurement -= m_sim_parameters.time_step;
             }
 
             // Compass Measurement
-            if (m_sim_parameters.compass_enabled)
+            if (m_sim_parameters.cur_sensors_profile.compass_enabled)
             {
                 if (m_time_till_compass_measurement <= 0)
                 {
                     CompassMeasurement meas = m_compass_sensor.generateCompassMeasurement(m_car.getVehicleState().theta);
                     m_selected_filter->handleCompassMeasurement(meas);
-                    m_time_till_compass_measurement += 1.0/m_sim_parameters.compass_update_rate;
+                    m_time_till_compass_measurement += 1.0/m_sim_parameters.cur_sensors_profile.compass_update_rate;
                 }
                 m_time_till_compass_measurement -= m_sim_parameters.time_step;
             }
 
             // GPS Measurement
-            if (m_sim_parameters.gps_enabled)
+            if (m_sim_parameters.cur_sensors_profile.gps_enabled)
             {
                 if (m_time_till_gps_measurement <= 0)
                 {
                     GPSMeasurement gps_meas = m_gps_sensor.generateGPSMeasurement(m_car.getVehicleState().x,m_car.getVehicleState().y);
                     m_selected_filter->handleGPSMeasurement(gps_meas);
                     m_gps_measurement_history.push_back(gps_meas);
-                    m_time_till_gps_measurement += 1.0/m_sim_parameters.gps_update_rate;
+                    m_time_till_gps_measurement += 1.0/m_sim_parameters.cur_sensors_profile.gps_update_rate;
                 }
                 m_time_till_gps_measurement -= m_sim_parameters.time_step;
             }
 
             // Lidar Measurement
-            if (m_sim_parameters.lidar_enabled)
+            if (m_sim_parameters.cur_sensors_profile.lidar_enabled)
             {
                 if (m_time_till_lidar_measurement <= 0)
                 {
                     std::vector<LidarMeasurement> lidar_measurements = m_lidar_sensor.generateLidarMeasurements(m_car.getVehicleState().x,m_car.getVehicleState().y, m_car.getVehicleState().theta, m_beacons);
                     m_selected_filter->handleLidarMeasurements(lidar_measurements, m_beacons);
                     m_lidar_measurement_history = lidar_measurements;
-                    m_time_till_lidar_measurement += 1.0/m_sim_parameters.lidar_update_rate;
+                    m_time_till_lidar_measurement += 1.0/m_sim_parameters.cur_sensors_profile.lidar_update_rate;
                 }
                 m_time_till_lidar_measurement -= m_sim_parameters.time_step;
             }
@@ -326,6 +369,11 @@ void Simulation::update()
                 double pos_error_y = filter_state.y - vehicle_state.y;
                 double pos_error = std::sqrt(pos_error_x*pos_error_x + pos_error_y*pos_error_y);
                 m_filter_error_position_history.push_back(pos_error);
+
+                if (pos_error > m_max_position_error)
+                {
+                    m_max_position_error = pos_error;
+                }
                 
                 m_filter_error_heading_history.push_back(wrapAngle(filter_state.theta - vehicle_state.theta));
                 m_filter_error_velocity_history.push_back(filter_state.V - vehicle_state.V);
@@ -397,15 +445,15 @@ void Simulation::render(Display& disp)
     for(const auto& meas : m_gps_measurement_history){disp.drawLines(offsetPoints(m_gps_marker, Vector2(meas.x,meas.y)));}
 
     // Render GPS Denied Zone
-    if(m_sim_parameters.gps_denied_range > 0)
+    if(m_sim_parameters.cur_sensors_profile.gps_denied_range > 0)
     {
-        std::vector<Vector2> zone_lines = generateCircle(m_sim_parameters.gps_denied_x, m_sim_parameters.gps_denied_y, m_sim_parameters.gps_denied_range);
+        std::vector<Vector2> zone_lines = generateCircle(m_sim_parameters.cur_sensors_profile.gps_denied_x, m_sim_parameters.cur_sensors_profile.gps_denied_y, m_sim_parameters.cur_sensors_profile.gps_denied_range);
         disp.setDrawColour(255,150,0);
         disp.drawLines(zone_lines);
     }
 
     // Render Lidar Measurements
-    if (m_sim_parameters.lidar_enabled)
+    if (m_sim_parameters.cur_sensors_profile.lidar_enabled)
     {
         for(const auto& meas : m_lidar_measurement_history)
         {
@@ -428,20 +476,20 @@ void Simulation::render(Display& disp)
     std::string filter_type_string =    "Current Filter Type: " + m_selected_filter->getName();
     std::string time_string =           string_format("Time: %0.2f (x%d)",m_time,m_time_multiplier);
     std::string sensors_string =        "Sensors: ";
-    std::string gps_string =            string_format("                      GPS [g]: %s (%0.1f Hz)", (m_sim_parameters.gps_enabled ? "ON" : "OFF"), m_sim_parameters.gps_update_rate);
-    std::string lidar_string =          string_format("                  LIDAR [d]: %s (%0.1f Hz) ", (m_sim_parameters.lidar_enabled ? "ON" : "OFF"), m_sim_parameters.lidar_update_rate);
-    std::string imu_string =            string_format("                        IMU [i]: %s (%0.1f Hz)", (m_sim_parameters.imu_enabled ? "ON" : "OFF"), m_sim_parameters.imu_update_rate);
-    std::string compass_string =        string_format("            Compass [c]: %s (%0.1f Hz)", (m_sim_parameters.compass_enabled ? "ON" : "OFF"), m_sim_parameters.compass_update_rate);
-    std::string wheelencoder_string =   string_format("Wheel Encoder [w]: %s (%0.1f Hz)", (m_sim_parameters.wheelspeed_enabled ? "ON" : "OFF"), m_sim_parameters.wheelspeed_update_rate);
+    std::string gps_string =            string_format("                      GPS [g]: %s (%0.1f Hz)", (m_sim_parameters.cur_sensors_profile.gps_enabled ? "ON" : "OFF"), m_sim_parameters.cur_sensors_profile.gps_update_rate);
+    std::string lidar_string =          string_format("                  LIDAR [d]: %s (%0.1f Hz) ", (m_sim_parameters.cur_sensors_profile.lidar_enabled ? "ON" : "OFF"), m_sim_parameters.cur_sensors_profile.lidar_update_rate);
+    std::string imu_string =            string_format("                        IMU [i]: %s (%0.1f Hz)", (m_sim_parameters.cur_sensors_profile.imu_enabled ? "ON" : "OFF"), m_sim_parameters.cur_sensors_profile.imu_update_rate);
+    std::string compass_string =        string_format("            Compass [c]: %s (%0.1f Hz)", (m_sim_parameters.cur_sensors_profile.compass_enabled ? "ON" : "OFF"), m_sim_parameters.cur_sensors_profile.compass_update_rate);
+    std::string wheelencoder_string =   string_format("Wheel Encoder [w]: %s (%0.1f Hz)", (m_sim_parameters.cur_sensors_profile.wheelspeed_enabled ? "ON" : "OFF"), m_sim_parameters.cur_sensors_profile.wheelspeed_update_rate);
     disp.drawText_MainFont(profile_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
     disp.drawText_MainFont(filter_type_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,0});
     disp.drawText_MainFont(time_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
     disp.drawText_MainFont(sensors_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
-    disp.drawText_Color_Condition(gps_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.gps_enabled);
-    disp.drawText_Color_Condition(lidar_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.lidar_enabled);
-    disp.drawText_Color_Condition(imu_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.imu_enabled);
-    disp.drawText_Color_Condition(compass_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.compass_enabled);
-    disp.drawText_Color_Condition(wheelencoder_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.wheelspeed_enabled);
+    disp.drawText_Color_Condition(gps_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.cur_sensors_profile.gps_enabled);
+    disp.drawText_Color_Condition(lidar_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.cur_sensors_profile.lidar_enabled);
+    disp.drawText_Color_Condition(imu_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.cur_sensors_profile.imu_enabled);
+    disp.drawText_Color_Condition(compass_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.cur_sensors_profile.compass_enabled);
+    disp.drawText_Color_Condition(wheelencoder_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.cur_sensors_profile.wheelspeed_enabled);
     if (m_is_paused){disp.drawText_MainFont("PAUSED",Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,0,0});}
     if (!m_is_running){disp.drawText_MainFont("FINISHED",Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,0,0});}
 
@@ -538,38 +586,38 @@ void Simulation::selectFilter(unsigned int index)
         case 0:
             m_selected_filter = &m_kalman_filter_lkf;
             std::cout << "Simulation: Selected LKF" << std::endl;
-            m_sim_parameters.compass_enabled = false;
-            m_sim_parameters.gps_enabled = true;
-            m_sim_parameters.imu_enabled = false;
-            m_sim_parameters.lidar_enabled = false;
-            m_sim_parameters.wheelspeed_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.compass_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.gps_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.imu_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.lidar_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.wheelspeed_enabled = false;
             break;
         case 1:
             m_selected_filter = &m_kalman_filter_ekf;
             std::cout << "Simulation: Selected EKF" << std::endl;
-            // m_sim_parameters.compass_enabled = true;
-            // m_sim_parameters.gps_enabled = true;
-            // m_sim_parameters.imu_enabled = true;
-            // m_sim_parameters.lidar_enabled = false;
-            // m_sim_parameters.wheelspeed_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.compass_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.gps_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.imu_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.lidar_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.wheelspeed_enabled = true;
             break;
         case 2:
             m_selected_filter = &m_kalman_filter_ukf;
             std::cout << "Simulation: Selected UKF" << std::endl;
-            // m_sim_parameters.compass_enabled = true;
-            // m_sim_parameters.gps_enabled = true;
-            // m_sim_parameters.imu_enabled = true;
-            // m_sim_parameters.lidar_enabled = false;
-            // m_sim_parameters.wheelspeed_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.compass_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.gps_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.imu_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.lidar_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.wheelspeed_enabled = true;
             break;
         case 3:
             m_selected_filter = &m_odometry_filter;
             std::cout << "Simulation: Selected Odometry Filter" << std::endl;
-            m_sim_parameters.compass_enabled = false;
-            m_sim_parameters.gps_enabled = true;
-            m_sim_parameters.imu_enabled = false;
-            m_sim_parameters.lidar_enabled = false;
-            m_sim_parameters.wheelspeed_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.compass_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.gps_enabled = true;
+            // m_sim_parameters.cur_sensors_profile.imu_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.lidar_enabled = false;
+            // m_sim_parameters.cur_sensors_profile.wheelspeed_enabled = true;
             break;
         default: ;
     }

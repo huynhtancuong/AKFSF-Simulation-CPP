@@ -13,8 +13,8 @@
 // YOU CAN USE AND MODIFY THESE CONSTANTS HERE
 constexpr double ACCEL_STD = 0.05;
 constexpr double GYRO_STD = 0.05;
-constexpr double WHEEL_SPEED_STD = 0.05;
-constexpr double COMPASS_STD = 0.1;
+constexpr double WHEEL_SPEED_STD = 0.1;
+constexpr double COMPASS_STD = 0.05;
 constexpr double GPS_POS_STD = 3.0;
 constexpr double LIDAR_RANGE_STD = 3.0;
 constexpr double LIDAR_THETA_STD = 0.02;
@@ -30,6 +30,9 @@ constexpr double PROCESS_NOISE_VEL_STD = 0.01;
 constexpr double PROCESS_NOISE_THETA_STD = 0.01;
 constexpr double PROCESS_NOISE_OMEGA_STD = 0.01;
 constexpr double PROCESS_NOISE_ACCEL_STD = ACCEL_STD;
+
+constexpr double NIS_THRESHOLD = 20.0; // Normalised Innovation Squared threshold
+constexpr bool REJECT_FAULTY_MEASUREMENTS = false;
 
 // ----------------------------------------------------------------------- //
 // USEFUL HELPER FUNCTIONS
@@ -314,6 +317,13 @@ void KalmanFilterUKF::handleLidarMeasurement(LidarMeasurement meas, const Beacon
 
             state = normaliseState(state); // Wrap the angle to be within -pi to pi
 
+            /* Faulty measurement test */
+            double NIS = y.transpose()*S.inverse()*y;
+            if (NIS >= NIS_THRESHOLD && REJECT_FAULTY_MEASUREMENTS) {
+                std::cerr << "LIDAR NIS Failed: " << NIS << std::endl;
+                return; // Skip the update step if the measurement is faulty
+            }
+
         }
         // ----------------------------------------------------------------------- //
 
@@ -357,6 +367,13 @@ void KalmanFilterUKF::handleGPSMeasurement(GPSMeasurement meas)
         cov = (I - K*H) * cov * (I - K*H).transpose() + K*R*K.transpose();
 
         state = normaliseState(state); // Wrap the angle to be within -pi to pi
+
+        /* Faulty measurement test */
+        double NIS = y.transpose()*S.inverse()*y;
+        if (NIS >= NIS_THRESHOLD && REJECT_FAULTY_MEASUREMENTS) {
+            std::cerr << "GPS NIS Failed: " << NIS << std::endl;
+            return; // Skip the update step if the measurement is faulty
+        }
 
         setState(state);
         setCovariance(cov);
@@ -417,7 +434,14 @@ void KalmanFilterUKF::handleWheelsSpeedMeasurement(WheelsSpeedMeasurement meas)
         state = state + K * y;
         cov = (I - K * H) * cov;
 
-        state = normaliseState(state); // Wrap the angle to be within -pi to pi
+        state(2) = wrapAngle(state(2)); // Wrap the angle to be within -pi to pi
+
+        /* Faulty measurement test */
+        double NIS = y.transpose()*S.inverse()*y;
+        if (NIS >= NIS_THRESHOLD && REJECT_FAULTY_MEASUREMENTS) {
+            std::cerr << "WHEEL NIS Failed: " << NIS << std::endl;
+            return; // Skip the update step if the measurement is faulty
+        }
 
         setState(state);
         setCovariance(cov);
@@ -461,6 +485,14 @@ void KalmanFilterUKF::handleCompassMeasurement(CompassMeasurement meas)
 
         // Wrap the angle to be within -pi to pi
         state = normaliseState(state);
+
+
+        /* Faulty measurement test */
+        double NIS = y.transpose()*S.inverse()*y;
+        if (NIS >= NIS_THRESHOLD && REJECT_FAULTY_MEASUREMENTS) {
+            std::cerr << "COMPASS NIS Failed: " << NIS << std::endl;
+            return; // Skip the update step if the measurement is faulty
+        }
 
         setState(state);
         setCovariance(cov);
