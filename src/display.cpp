@@ -90,7 +90,7 @@ void Display::clearScreen()
     if (mRenderer != nullptr)
     {
         //Clear screen
-        SDL_SetRenderDrawColor( mRenderer, 0x00, 0x00, 0x00, 0xFF );
+        setDrawColour(backgroundColor);
         SDL_RenderClear( mRenderer );
     }
 }
@@ -115,6 +115,11 @@ void Display::setView(double xOffset, double yOffset)
 {
     mViewXOffset = xOffset - mViewHeight/2.0;
     mViewYOffset = yOffset - mViewWidth/2.0;
+}
+
+void Display::setDrawColour(const SDL_Color& color)
+{
+    setDrawColour(color.r, color.g, color.b, color.a);
 }
 
 void Display::setDrawColour(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha){SDL_SetRenderDrawColor( mRenderer, red, green, blue, alpha );}

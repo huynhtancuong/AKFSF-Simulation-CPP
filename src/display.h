@@ -32,6 +32,16 @@ std::vector<std::vector<Vector2>> scalePoints(const std::vector<std::vector<Vect
 std::vector<Vector2> offsetPoints(const std::vector<Vector2>& points, const Vector2& offset);
 std::vector<std::vector<Vector2>> offsetPoints(const std::vector<std::vector<Vector2>>& dataset, const Vector2& offset);
 
+static SDL_Color backgroundColor = {255, 255, 255, 255};
+static SDL_Color textColor = {0, 0, 0, 255};
+static SDL_Color matlabColor1 = {0, 113, 188, 255};
+static SDL_Color matlabColor2 = {216, 82, 24, 255};
+static SDL_Color matlabColor3 = {236, 176, 31, 255};
+static SDL_Color matlabColor4 = {125, 46, 141, 255};
+static SDL_Color matlabColor5 = {118, 171, 47, 255};
+static SDL_Color matlabColor6 = {76, 189, 237, 255};
+static SDL_Color matlabColor7 = {161, 19, 46, 255};
+
 
 class Display
 {
@@ -53,10 +63,11 @@ class Display
         void drawText_MainFont(const std::string text, const Vector2 pos, const double scale = 1, const SDL_Color color = {0,0,0}, bool centered = false );
         void drawText_Color_Condition(const std::string text, const Vector2 pos, const bool condition)
         {
-            SDL_Color color = (condition ? SDL_Color{0,255,0} : SDL_Color{255,0,0});
+            SDL_Color color = (condition ? matlabColor5 : matlabColor2);
             drawText_MainFont(text, pos, 1.0, color);
         }
 
+        void setDrawColour(const SDL_Color& color);
         void setDrawColour(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha=0xFF);
         void setView(double width, double height, double xOffset, double yOffset);
         void setView(double xOffset, double yOffset);

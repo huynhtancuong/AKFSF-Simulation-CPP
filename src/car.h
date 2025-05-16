@@ -256,14 +256,14 @@ class Car
             Vector2 carPosOffset = Vector2(m_vehicle_model.getVehicleState().x, m_vehicle_model.getVehicleState().y);
             
             // Draw car body with thicker lines
-            disp.setDrawColour(0,255,0);
-            disp.drawLines(transformPoints(scalePoints(m_car_lines_body, 2.5), carPosOffset, carPsiOffset), 3);
+            disp.setDrawColour(textColor);
+            disp.drawLines(transformPoints(scalePoints(m_car_lines_body, 2.5), carPosOffset, carPsiOffset), 1);
             disp.drawLines(transformPoints(m_marker_lines, carPosOffset, carPsiOffset), 2);
 
             // Draw wheels with thicker lines
-            disp.setDrawColour(0,201,0);
-            disp.drawLines(transformPoints(offsetPoints(scalePoints(m_wheel_lines, 1.5), m_wheel_left_offset), carPosOffset, carPsiOffset), 2);
-            disp.drawLines(transformPoints(offsetPoints(scalePoints(m_wheel_lines, 1.5), m_wheel_right_offset), carPosOffset, carPsiOffset), 2);
+            disp.setDrawColour(textColor);
+            disp.drawLines(transformPoints(offsetPoints(scalePoints(m_wheel_lines, 1.5), m_wheel_left_offset), carPosOffset, carPsiOffset), 1);
+            disp.drawLines(transformPoints(offsetPoints(scalePoints(m_wheel_lines, 1.5), m_wheel_right_offset), carPosOffset, carPsiOffset), 1);
         }
 
     private:

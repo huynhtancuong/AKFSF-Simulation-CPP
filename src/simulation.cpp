@@ -4,6 +4,7 @@
 #include <cmath>
 #include <filesystem>
 #include <matplot/matplot.h>
+// #include "display.h"
 
 Simulation::Simulation():
     m_sim_parameters(SimulationParams()),
@@ -410,10 +411,10 @@ void Simulation::render(Display& disp)
     m_car.render(disp);
     m_beacons.render(disp);
 
-    disp.setDrawColour(0,150,0);
+    disp.setDrawColour(matlabColor1);
     disp.drawLines(m_vehicle_position_history, 1);
 
-    disp.setDrawColour(150,0,0);
+    disp.setDrawColour(matlabColor2);
     disp.drawLines(m_filter_position_history, 1);
 
     if (m_selected_filter->isInitialised())
@@ -429,26 +430,26 @@ void Simulation::render(Display& disp)
 
         std::vector<Vector2> marker_lines1_world = offsetPoints(marker_lines1, Vector2(x,y));
         std::vector<Vector2> marker_lines2_world = offsetPoints(marker_lines2, Vector2(x,y));
-        disp.setDrawColour(255,0,0);
-        disp.drawLines(marker_lines1_world, 2);
-        disp.drawLines(marker_lines2_world, 2);
+        disp.setDrawColour(matlabColor2);
+        disp.drawLines(marker_lines1_world, 1);
+        disp.drawLines(marker_lines2_world, 1);
 
         std::vector<Vector2> cov_world = generateEllipse(x,y,sigma_xx,sigma_yy,sigma_xy);
-        disp.setDrawColour(255,0,0);
-        disp.drawLines(cov_world, 2);
+        disp.setDrawColour(matlabColor2);
+        disp.drawLines(cov_world, 1);
 
     }
 
     // Render GPS Measurements
     std::vector<std::vector<Vector2>> m_gps_marker = {{{0.5,0.5},{-0.5,-0.5}}, {{0.5,-0.5},{-0.5,0.5}}};
-    disp.setDrawColour(255,255,255);
+    disp.setDrawColour(textColor);
     for(const auto& meas : m_gps_measurement_history){disp.drawLines(offsetPoints(m_gps_marker, Vector2(meas.x,meas.y)));}
 
     // Render GPS Denied Zone
     if(m_sim_parameters.cur_sensors_profile.gps_denied_range > 0)
     {
         std::vector<Vector2> zone_lines = generateCircle(m_sim_parameters.cur_sensors_profile.gps_denied_x, m_sim_parameters.cur_sensors_profile.gps_denied_y, m_sim_parameters.cur_sensors_profile.gps_denied_range);
-        disp.setDrawColour(255,150,0);
+        disp.setDrawColour(matlabColor2);
         disp.drawLines(zone_lines);
     }
 
@@ -461,7 +462,7 @@ void Simulation::render(Display& disp)
             double y0 = m_car.getVehicleState().y;
             double delta_x = meas.range * cos(meas.psi + m_car.getVehicleState().theta);
             double delta_y = meas.range * sin(meas.psi + m_car.getVehicleState().theta);
-            disp.setDrawColour(201,201,0);
+            disp.setDrawColour(matlabColor4);
             disp.drawLine(Vector2(x0,y0), Vector2(x0 + delta_x,y0 + delta_y));
         }
     }
@@ -481,10 +482,10 @@ void Simulation::render(Display& disp)
     std::string imu_string =            string_format("                        IMU [i]: %s (%0.1f Hz)", (m_sim_parameters.cur_sensors_profile.imu_enabled ? "ON" : "OFF"), m_sim_parameters.cur_sensors_profile.imu_update_rate);
     std::string compass_string =        string_format("            Compass [c]: %s (%0.1f Hz)", (m_sim_parameters.cur_sensors_profile.compass_enabled ? "ON" : "OFF"), m_sim_parameters.cur_sensors_profile.compass_update_rate);
     std::string wheelencoder_string =   string_format("Wheel Encoder [w]: %s (%0.1f Hz)", (m_sim_parameters.cur_sensors_profile.wheelspeed_enabled ? "ON" : "OFF"), m_sim_parameters.cur_sensors_profile.wheelspeed_update_rate);
-    disp.drawText_MainFont(profile_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
-    disp.drawText_MainFont(filter_type_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,0});
-    disp.drawText_MainFont(time_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
-    disp.drawText_MainFont(sensors_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,255,255});
+    disp.drawText_MainFont(profile_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,textColor);
+    disp.drawText_MainFont(filter_type_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,matlabColor3);
+    disp.drawText_MainFont(time_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,textColor);
+    disp.drawText_MainFont(sensors_string,Vector2(x_offset,y_offset+stride*line_num++),1.0,textColor);
     disp.drawText_Color_Condition(gps_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.cur_sensors_profile.gps_enabled);
     disp.drawText_Color_Condition(lidar_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.cur_sensors_profile.lidar_enabled);
     disp.drawText_Color_Condition(imu_string,Vector2(x_offset,y_offset+stride*line_num++), m_sim_parameters.cur_sensors_profile.imu_enabled);
@@ -494,58 +495,58 @@ void Simulation::render(Display& disp)
     if (!m_is_running){disp.drawText_MainFont("FINISHED",Vector2(x_offset,y_offset+stride*line_num++),1.0,{255,0,0});}
 
     // Vehicle State
-    x_offset = 800;
+    x_offset = 1600;
     y_offset = 10;
     std::string velocity_string =       string_format("    Velocity: %0.2f m/s",m_car.getVehicleState().V);
     std::string yaw_string =            string_format("   Heading: %0.2f deg",m_car.getVehicleState().theta * 180.0/M_PI);
     std::string yaw_rate_string =       string_format(" Yaw Rate: %0.2f deg/s",m_car.getVehicleState().yaw_rate * 180.0/M_PI);
     std::string xpos =                  string_format("X Position: %0.2f m",m_car.getVehicleState().x);
     std::string ypos =                  string_format("Y Position: %0.2f m",m_car.getVehicleState().y);
-    disp.drawText_MainFont("Vehicle State",Vector2(x_offset-5,y_offset+stride*0),1.0,{255,255,255});
-    disp.drawText_MainFont(velocity_string,Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
-    disp.drawText_MainFont(yaw_string,Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
-    disp.drawText_MainFont(xpos,Vector2(x_offset,y_offset+stride*3),1.0,{255,255,255});
-    disp.drawText_MainFont(ypos,Vector2(x_offset,y_offset+stride*4),1.0,{255,255,255});
-    disp.drawText_MainFont(yaw_rate_string,Vector2(x_offset,y_offset+stride*5),1.0,{255,255,255});
+    disp.drawText_MainFont("Vehicle State",Vector2(x_offset-5,y_offset+stride*0),1.0,textColor);
+    disp.drawText_MainFont(velocity_string,Vector2(x_offset,y_offset+stride*1),1.0,textColor);
+    disp.drawText_MainFont(yaw_string,Vector2(x_offset,y_offset+stride*2),1.0,textColor);
+    disp.drawText_MainFont(xpos,Vector2(x_offset,y_offset+stride*3),1.0,textColor);
+    disp.drawText_MainFont(ypos,Vector2(x_offset,y_offset+stride*4),1.0,textColor);
+    disp.drawText_MainFont(yaw_rate_string,Vector2(x_offset,y_offset+stride*5),1.0,textColor);
 
     std::string kf_velocity_string = string_format("    Velocity: %0.2f m/s",m_selected_filter->getVehicleState().V);
     std::string kf_yaw_string = string_format("   Heading: %0.2f deg",m_selected_filter->getVehicleState().theta * 180.0/M_PI);
     std::string kf_xpos = string_format("X Position: %0.2f m",m_selected_filter->getVehicleState().x);
     std::string kf_ypos = string_format("Y Position: %0.2f m",m_selected_filter->getVehicleState().y);
     std::string kf_yaw_rate = string_format("   Yaw Rate: %0.2f deg/s",m_selected_filter->getVehicleState().yaw_rate * 180.0/M_PI);
-    disp.drawText_MainFont("Filter State",Vector2(x_offset,y_offset+stride*8),1.0,{255,255,255});
-    disp.drawText_MainFont(kf_velocity_string,Vector2(x_offset,y_offset+stride*9),1.0,{255,255,255});
-    disp.drawText_MainFont(kf_yaw_string,Vector2(x_offset,y_offset+stride*10),1.0,{255,255,255});
-    disp.drawText_MainFont(kf_xpos,Vector2(x_offset,y_offset+stride*11),1.0,{255,255,255});
-    disp.drawText_MainFont(kf_ypos,Vector2(x_offset,y_offset+stride*12),1.0,{255,255,255});
-    disp.drawText_MainFont(kf_yaw_rate,Vector2(x_offset,y_offset+stride*13),1.0,{255,255,255});
+    disp.drawText_MainFont("Filter State",Vector2(x_offset,y_offset+stride*8),1.0,textColor);
+    disp.drawText_MainFont(kf_velocity_string,Vector2(x_offset,y_offset+stride*9),1.0,textColor);
+    disp.drawText_MainFont(kf_yaw_string,Vector2(x_offset,y_offset+stride*10),1.0,textColor);
+    disp.drawText_MainFont(kf_xpos,Vector2(x_offset,y_offset+stride*11),1.0,textColor);
+    disp.drawText_MainFont(kf_ypos,Vector2(x_offset,y_offset+stride*12),1.0,textColor);
+    disp.drawText_MainFont(kf_yaw_rate,Vector2(x_offset,y_offset+stride*13),1.0,textColor);
 
     // Keyboard Input
     x_offset = 10;
-    y_offset = 650;
-    disp.drawText_MainFont("Select Filter Type: (O/L/E/U)",Vector2(x_offset,y_offset+stride*-1),1.0,{255,255,255});
-    disp.drawText_MainFont("Reset Key: r",Vector2(x_offset,y_offset+stride*0),1.0,{255,255,255});
-    disp.drawText_MainFont("Pause Key: [space bar]",Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
-    disp.drawText_MainFont("Speed Multiplier (+/-) Key: [ / ] ",Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
-    disp.drawText_MainFont("Zoom (+/-) Key: PgUp / PgDn",Vector2(x_offset,y_offset+stride*3),1.0,{255,255,255});
-    disp.drawText_MainFont("Motion Profile Key: 1 - 9,0",Vector2(x_offset,y_offset+stride*4),1.0,{255,255,255});
+    y_offset = 950;
+    disp.drawText_MainFont("Select Filter Type: (O/L/E/U)",Vector2(x_offset,y_offset+stride*-1),1.0,textColor);
+    disp.drawText_MainFont("Reset Key: r",Vector2(x_offset,y_offset+stride*0),1.0,textColor);
+    disp.drawText_MainFont("Pause Key: [space bar]",Vector2(x_offset,y_offset+stride*1),1.0,textColor);
+    disp.drawText_MainFont("Speed Multiplier (+/-) Key: [ / ] ",Vector2(x_offset,y_offset+stride*2),1.0,textColor);
+    disp.drawText_MainFont("Zoom (+/-) Key: PgUp / PgDn",Vector2(x_offset,y_offset+stride*3),1.0,textColor);
+    disp.drawText_MainFont("Motion Profile Key: 1 - 9,0",Vector2(x_offset,y_offset+stride*4),1.0,textColor);
 
 
     // Filter Error State
-    x_offset = 750;
-    y_offset = 650;
+    x_offset = 1600;
+    y_offset = 950;
     std::string pos_error_string = string_format("Position RMSE: %0.2f m",calculateRMSE(m_filter_error_position_history));
     std::string heading_error_string = string_format("   Heading RMSE: %0.2f rad",calculateRMSE(m_filter_error_heading_history));
     std::string velocity_error_string = string_format("    Velocity RMSE: %0.2f m/s",calculateRMSE(m_filter_error_velocity_history));
-    disp.drawText_MainFont(pos_error_string,Vector2(x_offset,y_offset+stride*0),1.0,{255,255,255});
-    disp.drawText_MainFont(heading_error_string,Vector2(x_offset,y_offset+stride*1),1.0,{255,255,255});
-    disp.drawText_MainFont(velocity_error_string,Vector2(x_offset,y_offset+stride*2),1.0,{255,255,255});
+    disp.drawText_MainFont(pos_error_string,Vector2(x_offset,y_offset+stride*0),1.0,textColor);
+    disp.drawText_MainFont(heading_error_string,Vector2(x_offset,y_offset+stride*1),1.0,textColor);
+    disp.drawText_MainFont(velocity_error_string,Vector2(x_offset,y_offset+stride*2),1.0,textColor);
     
     // CPU Time metrics
     std::string current_cpu_time = string_format("Current CPU Time: %0.2f ms", m_cpu_times.empty() ? 0.0 : m_cpu_times.back());
     std::string avg_cpu_time = string_format("Avg CPU Time: %0.2f ms", m_cpu_time_avg);
-    disp.drawText_MainFont(current_cpu_time,Vector2(x_offset,y_offset+stride*3),1.0,{255,255,255});
-    disp.drawText_MainFont(avg_cpu_time,Vector2(x_offset,y_offset+stride*4),1.0,{255,255,255});
+    disp.drawText_MainFont(current_cpu_time,Vector2(x_offset,y_offset+stride*3),1.0,textColor);
+    disp.drawText_MainFont(avg_cpu_time,Vector2(x_offset,y_offset+stride*4),1.0,textColor);
 }
    
 void Simulation::reset(SimulationParams sim_params){m_sim_parameters = sim_params; reset();}

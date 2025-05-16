@@ -52,7 +52,7 @@ struct SensorsProfile
 
     SensorsProfile() :
         duration(0.0),
-        gps_enabled(true), gps_update_rate(1.0), gps_position_noise_std(3), gps_error_probability(0.0),gps_denied_x(0.0),gps_denied_y(0.0),gps_denied_range(-1.0),
+        gps_enabled(true), gps_update_rate(1.0), gps_position_noise_std(3.0), gps_error_probability(0.0),gps_denied_x(0.0),gps_denied_y(0.0),gps_denied_range(-1.0),
         lidar_enabled(true), lidar_id_enabled(true), lidar_update_rate(10.0),lidar_range_noise_std(3),lidar_theta_noise_std(0.02), lidar_error_probability(0.0),
         compass_enabled(true), compass_update_rate(5.0), compass_noise_std(0.05), compass_error_probability(0.0), compass_bias(0.0),
         wheelspeed_enabled(true), wheelspeed_update_rate(10.0), wheelspeed_noise_std(0.1), wheelspeed_error_probability(0.0), wheelspeed_scaling_factor(1.0),

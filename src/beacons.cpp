@@ -46,6 +46,6 @@ std::vector<BeaconData> BeaconMap::getBeacons() const
 void BeaconMap::render(Display& disp) const
 {
     const std::vector<Vector2> beacon_lines = {{1,0},{0,1},{0,-1},{1,0}};
-    disp.setDrawColour(255,255,0);
+    disp.setDrawColour(matlabColor7);
     for (const auto& beacon : m_beacon_map){disp.drawLines(offsetPoints(beacon_lines, Vector2(beacon.x,beacon.y)));}
 }

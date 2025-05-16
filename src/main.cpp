@@ -12,8 +12,8 @@
 #include <matplot/matplot.h>
 
 // Screen dimension constants
-const int SCREEN_WIDTH = 1024;
-const int SCREEN_HEIGHT = 768;
+const int SCREEN_WIDTH = 1920;
+const int SCREEN_HEIGHT = 1080;
 const double GRID_SIZE = 500;
 const double GRID_SPACEING = 25;
 
@@ -252,7 +252,7 @@ int main( int argc, char* args[] )
                 mDisplay.clearScreen();
 
                 // Draw Background Grid
-                mDisplay.setDrawColour(101,101,101);
+                mDisplay.setDrawColour(200,200,200);
                 for (int x = -GRID_SIZE; x <= GRID_SIZE; x+=GRID_SPACEING){mDisplay.drawLine(Vector2(x,-GRID_SIZE),Vector2(x,GRID_SIZE));}
                 for (int y = -GRID_SIZE; y <= GRID_SIZE; y+=GRID_SPACEING){mDisplay.drawLine(Vector2(-GRID_SIZE,y),Vector2(GRID_SIZE,y));}
 
