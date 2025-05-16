@@ -33,6 +33,7 @@ struct FilterSimulationData {
     std::string filter_name;
     std::vector<Vector2> vehicle_path;
     std::vector<Vector2> filter_path;
+    std::vector<GPSMeasurement> gps_history;
     double position_rmse, max_position_error;
     double heading_rmse;
     double avg_cpu_time;
@@ -60,6 +61,15 @@ void saveProfileSimData(std::vector <FilterSimulationData> filter_simulation_dat
     fig->size(800, 800);
     plot(true_x, true_y)->color("green").line_width(1).display_name("Ground Truth");
     hold(on);
+
+    std::vector<double> gps_x, gps_y;
+    for (const auto& gps : filter_simulation_data.at(0).gps_history)
+    {
+        gps_x.push_back(gps.x);
+        gps_y.push_back(gps.y);
+    }
+    scatter(gps_x, gps_y)->color("red").line_width(1).display_name("GPS");
+
     for (const auto& filter_data : filter_simulation_data)
     {
         std::vector<double> filter_x, filter_y;
@@ -77,37 +87,77 @@ void saveProfileSimData(std::vector <FilterSimulationData> filter_simulation_dat
     title("Vehicle Trajectory");
     save(trajectory_path);
 
-    // Save position error plot
+    // Save position error plot for the first 20 seconds
     std::vector<double> time;
+    std::vector<std::vector<double>> filtered_position_errors;
+
+    double max_plot_time = 50.0;
+
     for (unsigned i = 0; i < filter_simulation_data[0].position_error.size(); ++i)
     {
-        time.push_back(i/10.0);
+       double current_time = i / 10.0;
+       if (current_time > max_plot_time) break;
+       time.push_back(current_time);
     }
+
     auto fig2 = figure(true);
     hold(on);
     for (const auto& filter_data : filter_simulation_data)
     {
-        plot(time, filter_data.position_error)->line_width(1).display_name(filter_data.filter_name);
+        if (filter_data.filter_name == "Linear Kalman Filter" ||
+            filter_data.filter_name == "Odometry") continue;
+
+        std::vector<double> filtered_position_error;
+        for (unsigned i = 0; i < filter_data.position_error.size(); ++i)
+        {
+           if (i / 10.0 > max_plot_time) break;
+           filtered_position_error.push_back(filter_data.position_error[i]);
+        }
+        plot(time, filtered_position_error)->line_width(1); //.display_name(filter_data.filter_name);
     }
+
+    // Plot a vertical line every 20 seconds
+    for (double t = 0; t <= max_plot_time; t += 10.0)
+    {
+        plot(std::vector<double>{t, t}, std::vector<double>{0, 1})->color("black").line_width(1).line_style("--");
+    }
+
     grid(on);
     xlabel("Time (s)");
     ylabel("Meters");
     title("Position Error");
-    legend();
+    legend({"Extended Kalman Filter", "Unscented Kalman Filter"});
     save(path + "position_error.png");
 
-    // Save heading error plot
+    // Save heading error plot for the first 40 seconds
     auto fig3 = figure(true);
     hold(on);
     for (const auto& filter_data : filter_simulation_data)
     {
-        plot(time, filter_data.heading_error)->line_width(1).display_name(filter_data.filter_name);
+        // if (filter_data.filter_name == "Linear Kalman Filter" ||
+        //     filter_data.filter_name == "Odometry") continue;
+
+
+        std::vector<double> filtered_heading_error;
+        for (unsigned i = 0; i < filter_data.heading_error.size(); ++i)
+        {
+            if (i / 10.0 > max_plot_time) break;
+            filtered_heading_error.push_back(filter_data.heading_error[i]);
+        }
+        plot(time, filtered_heading_error)->line_width(1);//.display_name(filter_data.filter_name);
+    }
+    // Plot a vertic// Plot a vertical line every 20 seconds
+    for (double t = 0; t <= max_plot_time; t += 10.0)
+    {
+        plot(std::vector<double>{t, t}, std::vector<double>{-0.2, 0.2})->color("black").line_width(1).line_style("--");
     }
     grid(on);
     xlabel("Time (s)");
     ylabel("Radians");
     title("Heading Error");
-    legend();
+    legend({"Linear Kalman Filter", "Extended Kalman Filter", "Unscented Kalman Filter", "Odometry"});
+    ylim({-0.2, 0.2});
+
     save(path + "heading_error.png");
 }
 
@@ -165,20 +215,22 @@ int main( int argc, char* args[] )
     // Main Simulation Loop
     // mSimulation.reset(loadSimulation1Parameters());
 
-    mSimulation.setTimeMultiplier(100);
+    mSimulation.setTimeMultiplier(1);
 
     bool mRunning = true;
 
 
     std::vector<SimulationParams> sim_params;
-    sim_params.push_back(loadSimulation1Parameters());
-    sim_params.push_back(loadSimulation2Parameters());
-    sim_params.push_back(loadSimulation3Parameters());
-    sim_params.push_back(loadSimulation4Parameters());
-    sim_params.push_back(loadSimulation5Parameters());
-    sim_params.push_back(loadSimulation6Parameters());
+    // sim_params.push_back(loadSimulation1Parameters());
+    // sim_params.push_back(loadSimulation2Parameters());
+    // sim_params.push_back(loadSimulation3Parameters());
+    // sim_params.push_back(loadSimulation4Parameters());
+    // sim_params.push_back(loadSimulation5Parameters());
+    // sim_params.push_back(loadSimulation6Parameters());
     sim_params.push_back(loadSimulation7Parameters());
-    sim_params.push_back(loadSimulation8Parameters());
+    // sim_params.push_back(loadSimulation8Parameters());
+
+
 
     std::vector<FilterSimulationData> filter_simulation_data(4);
 
@@ -259,6 +311,7 @@ int main( int argc, char* args[] )
             filter_simulation_data[filter_type].heading_rmse = calculateRMSE(mSimulation.m_filter_error_heading_history);
             filter_simulation_data[filter_type].max_position_error = mSimulation.m_max_position_error;
             filter_simulation_data[filter_type].avg_cpu_time = mSimulation.m_cpu_time_avg;
+            filter_simulation_data[filter_type].gps_history = mSimulation.m_gps_measurement_history;
         }
         // Save plots
         saveProfileSimData(filter_simulation_data, sim_param.profile_name);
@@ -406,19 +459,19 @@ SimulationParams loadSimulation7Parameters()
 
 
     SensorsProfile sensors_config_1;
-    sensors_config_1.duration = 5.0;
+    sensors_config_1.duration = 10.0;
     sensors_config_1.gps_enabled = false;
     sensors_config_1.lidar_enabled = false;
     sensors_config_1.imu_enabled = false;
     // sensors_config_1.compass_enabled = false;
 
     SensorsProfile sensors_config_2;
-    sensors_config_2.duration = 5.0;
+    sensors_config_2.duration = 10.0;
 
     for (int i = 0; i < 12; ++i)
     {
-        sim_params.list_sensors_profile.push(sensors_config_1);
         sim_params.list_sensors_profile.push(sensors_config_2);
+        sim_params.list_sensors_profile.push(sensors_config_1);
     }
 
     sim_params.car_commands.emplace_back(new MotionCommandEightShape(120, 10, 250));
@@ -430,24 +483,27 @@ SimulationParams loadSimulation7Parameters()
 SimulationParams loadSimulation8Parameters()
 {
     SimulationParams sim_params;
-    sim_params.profile_name = "8 - Increasing Sensor Noise";
+    sim_params.profile_name = "8 - Temporary Increasing Sensor Noise";
     sim_params.end_time = 300.0;
 
 
-    SensorsProfile sensors_config_1;
-    sensors_config_1.duration = 10.0;
+    SensorsProfile sensors_config_1, sensors_config_base;
+    sensors_config_1.duration = 20.0;
+    sensors_config_base.duration = 20.0;
 
-    for (int i = 0; i < sim_params.end_time / sensors_config_1.duration; ++i)
+    double noise_percent = 10.0;
+
+    sensors_config_1.gps_position_noise_std = sensors_config_base.gps_position_noise_std * noise_percent;
+    sensors_config_1.lidar_range_noise_std = sensors_config_base.lidar_range_noise_std * noise_percent;
+    sensors_config_1.lidar_theta_noise_std = sensors_config_base.lidar_theta_noise_std * noise_percent;
+    sensors_config_1.wheelspeed_noise_std = sensors_config_base.wheelspeed_noise_std * noise_percent;
+    sensors_config_1.compass_noise_std = sensors_config_base.compass_noise_std * noise_percent;
+    sensors_config_1.gyro_noise_std = sensors_config_base.gyro_noise_std * noise_percent;
+    sensors_config_1.accel_noise_std = sensors_config_base.accel_noise_std * noise_percent;
+
+    for (int i = 0; i < 20; ++i)
     {
-        SensorsProfile sensors_config_base;
-        double noise_percent = 1.0 * i  + 1.0;
-        sensors_config_1.gps_position_noise_std = sensors_config_base.gps_position_noise_std * noise_percent;
-        sensors_config_1.lidar_range_noise_std = sensors_config_base.lidar_range_noise_std * noise_percent;
-        sensors_config_1.lidar_theta_noise_std = sensors_config_base.lidar_theta_noise_std * noise_percent;
-        sensors_config_1.wheelspeed_noise_std = sensors_config_base.wheelspeed_noise_std * noise_percent;
-        sensors_config_1.compass_noise_std = sensors_config_base.compass_noise_std * noise_percent;
-        sensors_config_1.gyro_noise_std = sensors_config_base.gyro_noise_std * noise_percent;
-        sensors_config_1.accel_noise_std = sensors_config_base.accel_noise_std * noise_percent;
+        sim_params.list_sensors_profile.push(sensors_config_base);
         sim_params.list_sensors_profile.push(sensors_config_1);
     }
 
