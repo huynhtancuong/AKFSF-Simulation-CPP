@@ -59,16 +59,16 @@ void saveProfileSimData(std::vector <FilterSimulationData> filter_simulation_dat
     }
     auto fig = figure(true);
     fig->size(800, 800);
-    plot(true_x, true_y)->color("green").line_width(1).display_name("Ground Truth");
+    plot(true_x, true_y)->color("green").line_width(1).display_name("Эталонное значение");
     hold(on);
 
-    std::vector<double> gps_x, gps_y;
-    for (const auto& gps : filter_simulation_data.at(0).gps_history)
-    {
-        gps_x.push_back(gps.x);
-        gps_y.push_back(gps.y);
-    }
-    scatter(gps_x, gps_y)->color("red").line_width(1).display_name("GPS");
+    // std::vector<double> gps_x, gps_y;
+    // for (const auto& gps : filter_simulation_data.at(0).gps_history)
+    // {
+    //     gps_x.push_back(gps.x);
+    //     gps_y.push_back(gps.y);
+    // }
+    // scatter(gps_x, gps_y)->color("red").line_width(1).display_name("GPS");
 
     for (const auto& filter_data : filter_simulation_data)
     {
@@ -78,20 +78,28 @@ void saveProfileSimData(std::vector <FilterSimulationData> filter_simulation_dat
             filter_x.push_back(pos.x);
             filter_y.push_back(pos.y);
         }
-        plot(filter_x, filter_y)->line_width(1).display_name(filter_data.filter_name);
+        plot(filter_x, filter_y)->line_width(1); //.display_name(filter_data.filter_name);
     }
+
     grid(on);
-    xlabel("x (m)");
-    ylabel("y (m)");
-    legend();
-    title("Vehicle Trajectory");
+    xlabel("X (метр)");
+    ylabel("Y (метр)");
+    legend({"LKF", "EKF", "UKF", "Odom"});
+    title("Траектория");
     save(trajectory_path);
 
-    // Save position error plot for the first 20 seconds
+
+
+
+
+
+    /*
+     * * Save position error plot for the first 20 seconds
+     */
     std::vector<double> time;
     std::vector<std::vector<double>> filtered_position_errors;
 
-    double max_plot_time = 50.0;
+    double max_plot_time = 500.0;
 
     for (unsigned i = 0; i < filter_simulation_data[0].position_error.size(); ++i)
     {
@@ -104,8 +112,8 @@ void saveProfileSimData(std::vector <FilterSimulationData> filter_simulation_dat
     hold(on);
     for (const auto& filter_data : filter_simulation_data)
     {
-        if (filter_data.filter_name == "Linear Kalman Filter" ||
-            filter_data.filter_name == "Odometry") continue;
+        // if (filter_data.filter_name == "Linear Kalman Filter" ||
+        //     filter_data.filter_name == "Odometry") continue;
 
         std::vector<double> filtered_position_error;
         for (unsigned i = 0; i < filter_data.position_error.size(); ++i)
@@ -114,22 +122,33 @@ void saveProfileSimData(std::vector <FilterSimulationData> filter_simulation_dat
            filtered_position_error.push_back(filter_data.position_error[i]);
         }
         plot(time, filtered_position_error)->line_width(1); //.display_name(filter_data.filter_name);
+        // plot(time, filtered_position_error)->line_width(1).display_name(filter_data.filter_name);
     }
 
     // Plot a vertical line every 20 seconds
-    for (double t = 0; t <= max_plot_time; t += 10.0)
-    {
-        plot(std::vector<double>{t, t}, std::vector<double>{0, 1})->color("black").line_width(1).line_style("--");
-    }
+    // for (double t = 0; t <= max_plot_time; t += 10.0)
+    // {
+    //     plot(std::vector<double>{t, t}, std::vector<double>{0, 1})->color("black").line_width(1).line_style("--");
+    // }
 
     grid(on);
-    xlabel("Time (s)");
-    ylabel("Meters");
-    title("Position Error");
-    legend({"Extended Kalman Filter", "Unscented Kalman Filter"});
+    xlabel("Время (с)");
+    ylabel("Ошибка положения (метр)");
+    title("Ошибка положения");
+    // legend({"Extended Kalman Filter", "Unscented Kalman Filter"});
+    legend({"LKF", "EKF", "UKF", "Odom"});
     save(path + "position_error.png");
 
-    // Save heading error plot for the first 40 seconds
+
+
+
+
+
+
+
+    /*
+     * Save heading error plot for the first 40 seconds
+     */
     auto fig3 = figure(true);
     hold(on);
     for (const auto& filter_data : filter_simulation_data)
@@ -147,16 +166,16 @@ void saveProfileSimData(std::vector <FilterSimulationData> filter_simulation_dat
         plot(time, filtered_heading_error)->line_width(1);//.display_name(filter_data.filter_name);
     }
     // Plot a vertic// Plot a vertical line every 20 seconds
-    for (double t = 0; t <= max_plot_time; t += 10.0)
-    {
-        plot(std::vector<double>{t, t}, std::vector<double>{-0.2, 0.2})->color("black").line_width(1).line_style("--");
-    }
+    // for (double t = 0; t <= max_plot_time; t += 10.0)
+    // {
+    //     plot(std::vector<double>{t, t}, std::vector<double>{-0.2, 0.2})->color("black").line_width(1).line_style("--");
+    // }
     grid(on);
-    xlabel("Time (s)");
-    ylabel("Radians");
-    title("Heading Error");
-    legend({"Linear Kalman Filter", "Extended Kalman Filter", "Unscented Kalman Filter", "Odometry"});
-    ylim({-0.2, 0.2});
+    xlabel("Время (с)");
+    ylabel("Ошибка курса (рад)");
+    title("Ошибка курса");
+    legend({"LKF", "EKF", "UKF", "Odom"});
+    // ylim({-0.2, 0.2});
 
     save(path + "heading_error.png");
 }
@@ -215,19 +234,19 @@ int main( int argc, char* args[] )
     // Main Simulation Loop
     // mSimulation.reset(loadSimulation1Parameters());
 
-    mSimulation.setTimeMultiplier(1);
+    mSimulation.setTimeMultiplier(50);
 
     bool mRunning = true;
 
 
     std::vector<SimulationParams> sim_params;
-    // sim_params.push_back(loadSimulation1Parameters());
-    // sim_params.push_back(loadSimulation2Parameters());
-    // sim_params.push_back(loadSimulation3Parameters());
-    // sim_params.push_back(loadSimulation4Parameters());
-    // sim_params.push_back(loadSimulation5Parameters());
-    // sim_params.push_back(loadSimulation6Parameters());
-    sim_params.push_back(loadSimulation7Parameters());
+    sim_params.push_back(loadSimulation1Parameters());
+    sim_params.push_back(loadSimulation2Parameters());
+    sim_params.push_back(loadSimulation3Parameters());
+    sim_params.push_back(loadSimulation4Parameters());
+    sim_params.push_back(loadSimulation5Parameters());
+    sim_params.push_back(loadSimulation6Parameters());
+    // sim_params.push_back(loadSimulation7Parameters());
     // sim_params.push_back(loadSimulation8Parameters());
 
 
